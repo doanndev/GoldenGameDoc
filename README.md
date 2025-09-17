@@ -5,7 +5,7 @@ The Auth module handles user authentication, registration, and session managemen
 
 ## Base URL
 ```
-/auth
+https://dp7vlq3z-8000.asse.devtunnels.ms/api/v1
 ```
 
 ## Authentication Methods
