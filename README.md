@@ -86,7 +86,7 @@ Registers a new user account after email verification.
 
 ---
 
-### 3. Login with Email
+### 3. Login with Username
 **POST** `/auth/login`
 
 Authenticates user with email and password.
@@ -94,7 +94,7 @@ Authenticates user with email and password.
 **Request Body:**
 ```json
 {
-  "email": "user@example.com",
+  "username": "userexample",
   "password": "SecurePass123!"
 }
 ```
