@@ -25,10 +25,12 @@ coins/
 ## 🚀 Tính năng
 
 - **Auto-initialization**: Tự động khởi tạo SOL và USDT khi module start
-- **Danh sách coins**: Lấy danh sách coins hỗ trợ
+- **Danh sách coins**: Lấy danh sách coins hỗ trợ từ database
+- **Tokens withdraw**: Lấy thông tin token SOL/USDT cho withdrawal (không cần database)
 - **Tìm kiếm**: Tìm kiếm coin theo tên, symbol
 - **Filter**: Lọc theo trạng thái active/inactive/all
 - **Sort**: Sắp xếp theo symbol A-Z
+- **Reusable constants**: Dữ liệu token có thể tái sử dụng trong các module khác
 
 ## 📊 Database Schema
 
@@ -46,18 +48,47 @@ coins/
 
 ## 🔗 API Endpoints
 
-### Lấy danh sách coins
+### 1. Lấy danh sách coins từ database
 
-- `GET /coins` - Lấy danh sách coins hỗ trợ
+**GET** `/coins` - Lấy danh sách coins hỗ trợ từ database
 
-### Query Parameters
-
+**Query Parameters:**
 - `search` - Tìm kiếm theo tên hoặc symbol (optional)
 - `status` - Lọc theo trạng thái: `active`, `inactive`, `all` (default: `active`)
 
+### 2. Lấy thông tin token cho withdrawal
+
+**GET** `/coins/tokens-withdraw` - Lấy thông tin token SOL/USDT cho withdrawal (không cần database)
+
+**Headers:** Không cần authentication
+
+**Response Success (200):**
+```json
+[
+  {
+    "id": 1,
+    "name": "Solana",
+    "symbol": "SOL",
+    "mint": "So11111111111111111111111111111111111111112",
+    "logo": "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png",
+    "website": "https://solana.com",
+    "status": "active"
+  },
+  {
+    "id": 2,
+    "name": "Tether USD",
+    "symbol": "USDT",
+    "mint": "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB",
+    "logo": "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB/logo.svg",
+    "website": "https://tether.to",
+    "status": "active"
+  }
+]
+```
+
 ## 📝 Ví dụ sử dụng
 
-### Lấy tất cả coins active
+### 1. Lấy tất cả coins active từ database
 
 ```bash
 GET /coins
@@ -87,14 +118,22 @@ GET /coins
 ]
 ```
 
-### Tìm kiếm coin
+### 2. Lấy thông tin token cho withdrawal (nhanh)
+
+```bash
+GET /coins/tokens-withdraw
+```
+
+**Response:** Tương tự như trên nhưng luôn trả về 2 tokens SOL và USDT
+
+### 3. Tìm kiếm coin trong database
 
 ```bash
 GET /coins?search=SOL
 GET /coins?search=Solana
 ```
 
-### Lọc theo trạng thái
+### 4. Lọc theo trạng thái
 
 ```bash
 GET /coins?status=all
@@ -115,6 +154,9 @@ GET /coins?status=inactive
 - **Status filtering**: Mặc định chỉ trả về coins có status `active`
 - **Search**: Tìm kiếm case-insensitive theo tên và symbol
 - **Sort**: Kết quả được sắp xếp theo symbol A-Z
+- **API `/coins/tokens-withdraw`**: Không cần authentication, luôn trả về SOL và USDT
+- **`TOKEN_DATA_WITHDRAW`**: Constant readonly, sử dụng spread operator `[...TOKEN_DATA_WITHDRAW]` để tạo copy
+- **Performance**: API tokens-withdraw nhanh hơn vì không truy vấn database
 
 ## 🚀 Khởi tạo mặc định
 
@@ -133,12 +175,26 @@ Khi module khởi động, hệ thống sẽ tự động tạo 2 coins:
 ## 🔗 Tích hợp với modules khác
 
 ### Wallet Histories Module
-- Sử dụng `Coin` entity để lưu thông tin coin trong withdrawal history
-- Liên kết qua `currency_symbol` field
+- **Trước:** Sử dụng `Coin` entity để lưu thông tin coin trong withdrawal history
+- **Sau:** Sử dụng `TOKEN_DATA_WITHDRAW` constant để lấy thông tin coin (không cần database)
+- **Lợi ích:** Nhanh hơn, ổn định hơn, không phụ thuộc database
 
 ### Blockchain Service
 - Sử dụng `mint` address để xác định coin trên Solana blockchain
 - Hỗ trợ cả SOL native và SPL tokens
+- Có thể import `TOKEN_DATA_WITHDRAW` để sử dụng mint addresses
+
+### Reusable Constants
+- **`TOKEN_DATA_WITHDRAW`**: Constant chứa thông tin SOL và USDT
+- **Export từ:** `src/modules/coins/coin.service.ts`
+- **Sử dụng:** Import vào bất kỳ module nào cần thông tin token
+- **Ví dụ:**
+  ```typescript
+  import { TOKEN_DATA_WITHDRAW } from '../coins/coin.service';
+  
+  const solToken = TOKEN_DATA_WITHDRAW.find(token => token.symbol === 'SOL');
+  const solMint = TOKEN_DATA_WITHDRAW[0].mint;
+  ```
 
 ## 📋 Checklist triển khai
 
@@ -146,6 +202,9 @@ Khi module khởi động, hệ thống sẽ tự động tạo 2 coins:
 - [x] DTOs cho API request/response
 - [x] Service với auto-initialization
 - [x] Controller với GET endpoint
+- [x] **API `/coins/tokens-withdraw`** - Lấy token cho withdrawal
+- [x] **`TOKEN_DATA_WITHDRAW` constant** - Dữ liệu tái sử dụng
 - [x] Module configuration
 - [x] Documentation đầy đủ
 - [x] Tích hợp vào `app.module.ts`
+- [x] **Tích hợp với Wallet Histories Module** - Sử dụng constant thay vì database
