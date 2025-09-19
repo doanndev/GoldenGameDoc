@@ -4,14 +4,15 @@
 Module Wallets cung cấp chức năng tạo ví HD (Hierarchical Deterministic) và quản lý ví cho tích hợp blockchain Solana. Nó tạo ra địa chỉ ví và keypair duy nhất cho người dùng sử dụng cụm từ ghi nhớ BIP39 và đường dẫn dẫn xuất tùy chỉnh.
 
 ## Tính năng
-- Tạo ví HD sử dụng BIP39 mnemonic
-- Đường dẫn dẫn xuất tùy chỉnh dựa trên user ID
-- Tạo Solana keypair
-- Dẫn xuất seed an toàn
-- Tạo địa chỉ ví duy nhất
-- Import ví từ private key
-- Quản lý đa ví (main + import)
-- Xóa ví đã import
+- **Tạo ví HD**: Sử dụng BIP39 mnemonic với đường dẫn dẫn xuất tùy chỉnh
+- **Import ví**: Import ví từ private key với tên tùy chỉnh
+- **Quản lý đa ví**: Hỗ trợ ví chính và ví import
+- **Xóa ví**: Xóa ví import với kiểm tra bảo mật
+- **Cập nhật tên ví**: Đổi tên cho cả ví chính và ví import
+- **Tìm kiếm**: Tìm kiếm ví theo địa chỉ và tên
+- **Sắp xếp**: Sắp xếp theo nhiều tiêu chí
+- **Phân trang**: Phân trang kết quả với metadata
+- **Bảo mật**: Ngăn xóa ví đang đăng nhập
 
 ## Base URL
 ```
@@ -20,37 +21,68 @@ Module Wallets cung cấp chức năng tạo ví HD (Hierarchical Deterministic)
 
 ## API Endpoints
 
-### 1. Lấy tất cả ví
+### 1. Lấy tất cả ví (có tìm kiếm, sắp xếp, phân trang)
 **GET** `/wallets`
 
-Lấy danh sách tất cả ví của người dùng (cả ví chính và ví đã import).
+Lấy danh sách tất cả ví của người dùng với hỗ trợ tìm kiếm, sắp xếp và phân trang.
 
 **Headers:**
 - `Authorization: Bearer <access_token>` hoặc access_token cookie
 
+**Query Parameters:**
+- `search` (string, optional) - Tìm kiếm theo địa chỉ ví hoặc tên ví
+- `sortBy` (string, optional) - Sắp xếp theo: `created_at`, `name`, `sol_address`, `type` (mặc định: `created_at`)
+- `sortOrder` (string, optional) - Thứ tự: `ASC`, `DESC` (mặc định: `DESC`)
+- `page` (number, optional) - Trang hiện tại (mặc định: 1)
+- `limit` (number, optional) - Số lượng item mỗi trang (mặc định: 10, tối đa: 100)
+- `type` (string, optional) - Lọc theo loại: `main`, `import`, `all` (mặc định: `all`)
+
+**Ví dụ sử dụng:**
+```
+GET /wallets?search=main&sortBy=name&sortOrder=ASC&page=1&limit=5&type=all
+```
+
 **Response:**
 ```json
-[
-  {
-    "id": 123,
-    "address": "9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM",
-    "name": "Main Wallet",
-    "type": "main",
-    "created_at": "2024-01-15T10:30:00.000Z"
-  },
-  {
-    "id": 456,
-    "address": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
-    "name": "My Imported Wallet",
-    "type": "import",
-    "created_at": "2024-01-14T15:20:00.000Z"
+{
+  "data": [
+    {
+      "id": 123,
+      "sol_address": "9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM",
+      "name": "Main Wallet",
+      "type": "main",
+      "created_at": "2024-01-15T10:30:00.000Z"
+    },
+    {
+      "id": 456,
+      "sol_address": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
+      "name": "My Imported Wallet",
+      "type": "import",
+      "created_at": "2024-01-14T15:20:00.000Z"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 10,
+    "total": 25,
+    "totalPages": 3,
+    "hasNext": true,
+    "hasPrev": false
   }
-]
+}
 ```
 
 **Status Codes:**
-- `200` - Danh sách ví được lấy thành công
+- `200` - Danh sách ví được lấy thành công với phân trang
 - `401` - Unauthorized (invalid or missing token)
+
+**Response Metadata:**
+- `pagination.page` - Trang hiện tại
+- `pagination.limit` - Số item mỗi trang
+- `pagination.total` - Tổng số ví
+- `pagination.totalPages` - Tổng số trang
+- `pagination.hasNext` - Có trang tiếp theo không
+- `pagination.hasPrev` - Có trang trước không
 
 ---
 
@@ -90,7 +122,7 @@ Import ví từ private key.
 ### 3. Xóa ví đã import
 **DELETE** `/wallets/import/:walletAddress`
 
-Xóa ví đã import của người dùng.
+Xóa ví đã import của người dùng. **Không thể xóa ví đang được sử dụng để đăng nhập.**
 
 **Headers:**
 - `Authorization: Bearer <access_token>` hoặc access_token cookie
@@ -107,6 +139,44 @@ Xóa ví đã import của người dùng.
 
 **Status Codes:**
 - `200` - Ví được xóa thành công
+- `400` - "Wallet not found" / "Wallet not owned by user" / "Cannot delete wallet that is currently being used for login"
+- `401` - Unauthorized (invalid or missing token)
+
+---
+
+### 4. Cập nhật tên ví
+**PATCH** `/wallets/change-name/:walletAddress`
+
+Cập nhật tên ví cho cả ví chính và ví import.
+
+**Headers:**
+- `Authorization: Bearer <access_token>` hoặc access_token cookie
+
+**Parameters:**
+- `walletAddress` (string) - Địa chỉ ví cần đổi tên
+
+**Request Body:**
+```json
+{
+  "name": "New Wallet Name"
+}
+```
+
+**Response:**
+```json
+{
+  "message": "Main wallet name updated successfully"
+}
+```
+hoặc
+```json
+{
+  "message": "Import wallet name updated successfully"
+}
+```
+
+**Status Codes:**
+- `200` - Tên ví được cập nhật thành công
 - `400` - "Wallet not found" / "Wallet not owned by user"
 - `401` - Unauthorized (invalid or missing token)
 
@@ -127,6 +197,76 @@ Xóa ví đã import của người dùng.
   sol_address: string;
   name: string;
   created_at: Date;
+}
+```
+
+### UpdateWalletNameDto
+```typescript
+{
+  name: string; // Bắt buộc, 1-50 ký tự, đã trim
+}
+```
+
+### UpdateWalletNameResponseDto
+```typescript
+{
+  message: string; // "Main wallet name updated successfully" hoặc "Import wallet name updated successfully"
+}
+```
+
+### WalletQueryDto
+```typescript
+{
+  search?: string; // Tìm kiếm theo địa chỉ ví hoặc tên ví
+  sortBy?: WalletSortField; // Trường sắp xếp
+  sortOrder?: WalletSortOrder; // Thứ tự sắp xếp
+  page?: number; // Trang hiện tại (mặc định: 1)
+  limit?: number; // Số lượng item mỗi trang (mặc định: 10, tối đa: 100)
+  type?: string; // Loại ví: 'main', 'import', 'all' (mặc định: 'all')
+}
+```
+
+### WalletSortField
+```typescript
+enum WalletSortField {
+  CREATED_AT = 'created_at',
+  NAME = 'name',
+  SOL_ADDRESS = 'sol_address',
+  TYPE = 'type'
+}
+```
+
+### WalletSortOrder
+```typescript
+enum WalletSortOrder {
+  ASC = 'ASC',
+  DESC = 'DESC'
+}
+```
+
+### WalletResponseDto
+```typescript
+{
+  id: number;
+  sol_address: string; // Địa chỉ ví Solana
+  name: string;
+  type: 'main' | 'import';
+  created_at: Date;
+}
+```
+
+### PaginatedWalletResponseDto
+```typescript
+{
+  data: WalletResponseDto[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+    hasNext: boolean;
+    hasPrev: boolean;
+  };
 }
 ```
 
@@ -173,31 +313,61 @@ Promise<ImportWalletResponseDto>
 ```
 
 ### deleteImportWallet
-**Method:** `deleteImportWallet(userId: number, walletAddress: string)`
+**Method:** `deleteImportWallet(userId: number, walletAddress: string, currentWalletAddress?: string)`
 
-Xóa ví đã import của người dùng.
+Xóa ví đã import của người dùng. **Không thể xóa ví đang được sử dụng để đăng nhập.**
 
 **Parameters:**
 - `userId` (number) - ID của người dùng
-- `walletAddress` (string) - Địa chỉ ví
+- `walletAddress` (string) - Địa chỉ ví cần xóa
+- `currentWalletAddress` (string, optional) - Địa chỉ ví đang đăng nhập
 
 **Returns:**
 ```typescript
 Promise<{ message: string }>
 ```
 
-### getAllWallets
-**Method:** `getAllWallets(userId: number)`
+**Throws:**
+- `BadRequestException` - Nếu ví đang được sử dụng để đăng nhập
 
-Lấy tất cả ví của người dùng (cả ví chính và ví đã import).
+### getAllWallets
+**Method:** `getAllWallets(userId: number, query: WalletQueryDto)`
+
+Lấy tất cả ví của người dùng với hỗ trợ tìm kiếm, sắp xếp và phân trang.
 
 **Parameters:**
 - `userId` (number) - ID của người dùng
+- `query` (WalletQueryDto) - Query parameters cho tìm kiếm, sắp xếp, phân trang
 
 **Returns:**
 ```typescript
-Promise<any[]>
+Promise<PaginatedWalletResponseDto>
 ```
+
+**Tính năng:**
+- **Tìm kiếm:** Theo địa chỉ ví hoặc tên ví (case insensitive)
+- **Sắp xếp:** Theo `created_at`, `name`, `sol_address`, `type`
+- **Phân trang:** Hỗ trợ pagination với metadata
+- **Lọc:** Theo loại ví (`main`, `import`, `all`)
+- **Tên ví:** Sử dụng tên từ database cho ví chính, fallback 'N/A'
+
+### updateWalletName
+**Method:** `updateWalletName(userId: number, walletAddress: string, newName: string)`
+
+Cập nhật tên ví cho cả ví chính và ví import.
+
+**Parameters:**
+- `userId` (number) - ID của người dùng
+- `walletAddress` (string) - Địa chỉ ví cần đổi tên
+- `newName` (string) - Tên mới cho ví
+
+**Returns:**
+```typescript
+Promise<{ message: string }>
+```
+
+**Throws:**
+- `BadRequestException` - Nếu ví không tìm thấy hoặc không thuộc về người dùng
 
 ## Thuật toán đường dẫn dẫn xuất
 
@@ -281,6 +451,16 @@ MNEMONIC=your_24_word_mnemonic_phrase_here
 - Lưu trữ private key an toàn trong database
 - Kiểm tra trùng lặp ví trước khi import
 
+### Bảo mật Xóa Ví
+- Ngăn xóa ví đang được sử dụng để đăng nhập
+- Kiểm tra quyền sở hữu ví trước khi xóa
+- Xác thực địa chỉ ví trước khi thực hiện thao tác
+
+### Bảo mật Cập Nhật Tên
+- Kiểm tra quyền sở hữu ví trước khi cập nhật
+- Validation tên ví (1-50 ký tự)
+- Trim whitespace để tránh lỗi
+
 ## Ví dụ sử dụng
 
 ### Tạo ví cơ bản
@@ -323,8 +503,47 @@ console.log(importedWallet.sol_address); // "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZ
 ### Lấy danh sách ví
 ```typescript
 // Lấy tất cả ví của người dùng
-const allWallets = await this.walletService.getAllWallets(userId);
-console.log(allWallets); // Array of main and imported wallets
+// Lấy tất cả ví với phân trang
+const query = {
+  search: 'main',
+  sortBy: 'created_at',
+  sortOrder: 'DESC',
+  page: 1,
+  limit: 10,
+  type: 'all'
+};
+const result = await this.walletService.getAllWallets(userId, query);
+console.log(result.data); // Array of wallets
+console.log(result.pagination); // Pagination metadata
+```
+
+## Tính năng tìm kiếm và phân trang
+
+### Tìm kiếm
+- **Tìm theo địa chỉ ví:** `?search=9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM`
+- **Tìm theo tên ví:** `?search=Main Wallet`
+- **Tìm kiếm partial:** `?search=main` (sẽ tìm "Main Wallet")
+- **Case insensitive:** Tìm kiếm không phân biệt hoa thường
+
+### Sắp xếp
+- **Theo thời gian tạo:** `?sortBy=created_at&sortOrder=DESC`
+- **Theo tên ví:** `?sortBy=name&sortOrder=ASC`
+- **Theo địa chỉ ví:** `?sortBy=sol_address&sortOrder=ASC`
+- **Theo loại ví:** `?sortBy=type&sortOrder=ASC`
+
+### Phân trang
+- **Trang đầu tiên:** `?page=1&limit=10`
+- **Trang tiếp theo:** `?page=2&limit=10`
+- **Giới hạn tối đa:** `limit=100`
+
+### Lọc theo loại
+- **Chỉ ví chính:** `?type=main`
+- **Chỉ ví import:** `?type=import`
+- **Tất cả ví:** `?type=all` (mặc định)
+
+### Ví dụ kết hợp
+```
+GET /wallets?search=wallet&sortBy=name&sortOrder=ASC&page=1&limit=5&type=all
 ```
 
 ## Xử lý lỗi
@@ -393,6 +612,7 @@ Service ví tích hợp với entity `UserMainWallet`:
   user_id: number;
   address: string; // Địa chỉ public key
   path_hd_wallet: number; // Thành phần ngẫu nhiên (d)
+  name: string; // Tên tùy chỉnh cho ví chính (nullable)
 }
 ```
 
@@ -452,8 +672,10 @@ Entity kết nối người dùng với ví đã import:
 - ✅ REST API endpoints cho các thao tác ví
 - ✅ Hỗ trợ đa ví cho mỗi người dùng
 - ✅ Chức năng import ví từ private key
-- ✅ Xóa ví đã import
-- ✅ Lấy danh sách tất cả ví
+- ✅ Xóa ví đã import với kiểm tra bảo mật
+- ✅ Cập nhật tên ví cho cả ví chính và ví import
+- ✅ Lấy danh sách tất cả ví với tìm kiếm và phân trang
+- ✅ Tên ví từ database cho ví chính
 
 ### Tính năng dự kiến
 - 🔄 Kiểm tra số dư ví
@@ -461,6 +683,15 @@ Entity kết nối người dùng với ví đã import:
 - 🔄 Chức năng chuyển tiền
 - 🔄 Export ví
 - 🔄 Quản lý ví nâng cao
+
+### API Endpoints hiện tại
+```typescript
+// Các endpoints đã triển khai
+GET /wallets                           // Lấy danh sách ví
+POST /wallets/import                   // Import ví
+DELETE /wallets/import/:walletAddress  // Xóa ví import
+PATCH /wallets/change-name/:walletAddress // Đổi tên ví
+```
 
 ### API Endpoints tiềm năng
 ```typescript
