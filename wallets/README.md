@@ -112,10 +112,24 @@ Import ví từ private key.
 }
 ```
 
+**Các loại lỗi có thể xảy ra:**
+
+**400 Bad Request:**
+- `"Invalid private key format"` - Private key không đúng định dạng (Base58 hoặc Base64)
+- `"Wallet already imported by this user"` - Ví đã được import bởi user này
+
+**401 Unauthorized:**
+- Unauthorized (invalid or missing token)
+
+**500 Internal Server Error:**
+- `"MNEMONIC is not configured in environment variables"` - Chưa cấu hình MNEMONIC
+- `"Invalid mnemonic phrase"` - Mnemonic không hợp lệ
+
 **Status Codes:**
 - `201` - Ví được import thành công
-- `400` - "Invalid private key format" / "Wallet already imported by this user"
+- `400` - Bad Request (validation errors)
 - `401` - Unauthorized (invalid or missing token)
+- `500` - Internal Server Error (configuration errors)
 
 ---
 
@@ -137,9 +151,19 @@ Xóa ví đã import của người dùng. **Không thể xóa ví đang đượ
 }
 ```
 
+**Các loại lỗi có thể xảy ra:**
+
+**400 Bad Request:**
+- `"Cannot delete wallet that is currently being used for login"` - Không thể xóa ví đang được sử dụng để đăng nhập
+- `"Wallet not found"` - Không tìm thấy ví
+- `"Wallet not owned by user"` - Ví không thuộc về user này
+
+**401 Unauthorized:**
+- Unauthorized (invalid or missing token)
+
 **Status Codes:**
 - `200` - Ví được xóa thành công
-- `400` - "Wallet not found" / "Wallet not owned by user" / "Cannot delete wallet that is currently being used for login"
+- `400` - Bad Request (business logic errors)
 - `401` - Unauthorized (invalid or missing token)
 
 ---
@@ -175,9 +199,18 @@ hoặc
 }
 ```
 
+**Các loại lỗi có thể xảy ra:**
+
+**400 Bad Request:**
+- `"Wallet not found"` - Không tìm thấy ví
+- `"Wallet not owned by user"` - Ví không thuộc về user này
+
+**401 Unauthorized:**
+- Unauthorized (invalid or missing token)
+
 **Status Codes:**
 - `200` - Tên ví được cập nhật thành công
-- `400` - "Wallet not found" / "Wallet not owned by user"
+- `400` - Bad Request (business logic errors)
 - `401` - Unauthorized (invalid or missing token)
 
 ## Các đối tượng chuyển dữ liệu (DTOs)
@@ -461,6 +494,58 @@ MNEMONIC=your_24_word_mnemonic_phrase_here
 - Validation tên ví (1-50 ký tự)
 - Trim whitespace để tránh lỗi
 
+### Các trường hợp lỗi thường gặp
+
+#### 1. Lỗi private key không hợp lệ
+```json
+{
+  "statusCode": 400,
+  "message": "Invalid private key format",
+  "error": "Bad Request"
+}
+```
+**Giải pháp**: Sử dụng private key đúng định dạng Base58 hoặc Base64
+
+#### 2. Lỗi ví đã được import
+```json
+{
+  "statusCode": 400,
+  "message": "Wallet already imported by this user",
+  "error": "Bad Request"
+}
+```
+**Giải pháp**: Kiểm tra ví đã được import chưa trước khi import
+
+#### 3. Lỗi xóa ví đang đăng nhập
+```json
+{
+  "statusCode": 400,
+  "message": "Cannot delete wallet that is currently being used for login",
+  "error": "Bad Request"
+}
+```
+**Giải pháp**: Chuyển sang ví khác trước khi xóa ví hiện tại
+
+#### 4. Lỗi ví không thuộc về user
+```json
+{
+  "statusCode": 400,
+  "message": "Wallet not owned by user",
+  "error": "Bad Request"
+}
+```
+**Giải pháp**: Chỉ thao tác với ví thuộc về user hiện tại
+
+#### 5. Lỗi cấu hình mnemonic
+```json
+{
+  "statusCode": 500,
+  "message": "MNEMONIC is not configured in environment variables",
+  "error": "Internal Server Error"
+}
+```
+**Giải pháp**: Cấu hình biến môi trường MNEMONIC
+
 ## Ví dụ sử dụng
 
 ### Tạo ví cơ bản
@@ -588,18 +673,24 @@ GET /wallets?search=wallet&sortBy=name&sortOrder=ASC&page=1&limit=5&type=all
 
 ### Mã lỗi HTTP và Message
 
-#### 400 Bad Request
-- "Invalid private key format"
-- "Wallet already imported by this user"
-- "Wallet not found"
-- "Wallet not owned by user"
+#### 400 Bad Request - Validation & Business Logic Errors
+- **Private key validation**: `"Invalid private key format"` - Private key không đúng định dạng Base58/Base64
+- **Wallet import errors**:
+  - `"Wallet already imported by this user"` - Ví đã được import bởi user này
+- **Wallet deletion errors**:
+  - `"Cannot delete wallet that is currently being used for login"` - Không thể xóa ví đang đăng nhập
+  - `"Wallet not found"` - Không tìm thấy ví
+  - `"Wallet not owned by user"` - Ví không thuộc về user này
+- **Wallet update errors**:
+  - `"Wallet not found"` - Không tìm thấy ví
+  - `"Wallet not owned by user"` - Ví không thuộc về user này
 
 #### 401 Unauthorized
 - Unauthorized (invalid or missing token)
 
-#### 500 Internal Server Error
-- "MNEMONIC is not configured in environment variables"
-- "Invalid mnemonic phrase"
+#### 500 Internal Server Error - Configuration & System Errors
+- `"MNEMONIC is not configured in environment variables"` - Chưa cấu hình MNEMONIC
+- `"Invalid mnemonic phrase"` - Mnemonic không hợp lệ
 
 ## Tích hợp Database
 
