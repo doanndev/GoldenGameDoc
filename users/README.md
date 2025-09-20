@@ -35,42 +35,6 @@ Cho phép người dùng đổi tên với giới hạn thời gian 30 ngày. M�
 }
 ```
 
-**Response Error (400):**
-```json
-{
-  "statusCode": 400,
-  "message": "Username is already taken by another user",
-  "error": "Conflict"
-}
-```
-
-**Response Error (403):**
-```json
-{
-  "statusCode": 403,
-  "message": "You can only change username once every 30 days. Please wait 15 more days.",
-  "error": "Forbidden"
-}
-```
-
-**Response Error (404):**
-```json
-{
-  "statusCode": 404,
-  "message": "User not found",
-  "error": "Not Found"
-}
-```
-
-**Response Error (401):**
-```json
-{
-  "statusCode": 401,
-  "message": "Unauthorized",
-  "error": "Unauthorized"
-}
-```
-
 **Status Codes:**
 - `200` - Đổi tên thành công
 - `400` - Username đã được sử dụng
@@ -96,32 +60,6 @@ Authorization: Bearer <JWT_TOKEN>
   "username_expiry": "2024-02-15T10:30:00.000Z",
   "can_change": false,
   "days_left": 15
-}
-```
-
-**Response khi có thể đổi tên:**
-```json
-{
-  "username_expiry": "2024-01-10T10:30:00.000Z",
-  "can_change": true
-}
-```
-
-**Response Error (404):**
-```json
-{
-  "statusCode": 404,
-  "message": "User not found",
-  "error": "Not Found"
-}
-```
-
-**Response Error (401):**
-```json
-{
-  "statusCode": 401,
-  "message": "Unauthorized",
-  "error": "Unauthorized"
 }
 ```
 
