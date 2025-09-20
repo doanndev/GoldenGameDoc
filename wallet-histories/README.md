@@ -301,12 +301,16 @@ curl -X GET "http://localhost:3000/wallet-histories/withdraw-history?search=SOL&
 ### Error Handling
 
 #### 400 Bad Request - Validation & Business Logic Errors
+- **Address validation**: 
+  - `"Invalid destination wallet address"`
+  - `"Cannot transfer to the same wallet address"`
 - **Coin validation**: `"Coin {currency_symbol} not found or inactive"`
 - **Balance checks**: 
   - `"Insufficient balance"` (generic)
   - `"Insufficient SOL balance. Required: {required} SOL, Available: {available} SOL"`
   - `"Insufficient token balance. Required: {required}, Available: {available}"`
   - `"Insufficient SOL balance for transaction fee"`
+  - `"Insufficient SOL for transaction fee"` (ví chưa được funded)
 - **Token account errors**:
   - `"Token account not found"`
   - `"Source token account not found"`
