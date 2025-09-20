@@ -95,7 +95,7 @@ Xác thực người dùng với username và mật khẩu.
 ```json
 {
   "username": "johndoe",
-  "password": "SecurePass123!"
+  "password": "SecurePass123"
 }
 ```
 
@@ -112,7 +112,7 @@ Xác thực người dùng với username và mật khẩu.
 
 **Status Codes:**
 - `200` - Login successful
-- `401` - "Invalid username or password" / "Username not verified. Please verify your username first." / "Account is not active. Please contact support." / "Password not set. Please reset your password." / "Invalid email or password"
+- `401` - "Invalid username or password" / "Username not verified. Please verify your username first." / "Account is not active. Please contact support." / "Password not set. Please reset your password." / "Invalid username or password"
 
 ---
 
