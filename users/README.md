@@ -58,8 +58,6 @@ Authorization: Bearer <JWT_TOKEN>
 ```json
 {
   "username_expiry": "2024-02-15T10:30:00.000Z",
-  "can_change": false,
-  "days_left": 15
 }
 ```
 
