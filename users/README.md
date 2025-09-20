@@ -3,18 +3,10 @@
 ## Tổng quan
 Module Users xử lý quản lý thông tin người dùng, đặc biệt là chức năng đổi tên người dùng với giới hạn thời gian. Module này cung cấp các API để người dùng có thể thay đổi username và kiểm tra thời hạn đổi tên.
 
-**Lưu ý quan trọng:** Người dùng phải set username lần đầu trước khi có thể sử dụng các API khác. Nếu chưa set username, API `/auth/me` sẽ trả về lỗi "Username not set".
 
 ## Base URL
 ```
 /users
-```
-
-## Xác thực
-Tất cả các API trong module này đều yêu cầu xác thực JWT. Sử dụng Bearer token trong header Authorization.
-
-```http
-Authorization: Bearer <JWT_TOKEN>
 ```
 
 ## Các API Endpoints
