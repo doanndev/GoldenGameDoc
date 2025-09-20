@@ -44,49 +44,109 @@ SOLANA_WSS_URL=wss://your-wss-url.com
 import { useState, useEffect, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
 
-export const useWsWalletBalance = () => {
+interface TokenBalance {
+  amount: number;
+  priceUSD: number;
+  valueUSD: number;
+}
+
+interface BalanceData {
+  walletAddress: string;
+  sol: TokenBalance;
+  [key: string]: TokenBalance | string | number;
+  totalValueUSD: number;
+}
+
+interface UseWebSocketBalanceOptions {
+  walletAddress?: string;
+  tokenMints?: string;
+  autoConnect?: boolean;
+  enableLogs?: boolean;
+}
+
+export const useWebSocketBalance = (options: UseWebSocketBalanceOptions = {}) => {
+  const {
+    walletAddress = '',
+    tokenMints = '',
+    autoConnect = true,
+    enableLogs = false
+  } = options;
+
   const [socket, setSocket] = useState<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
-  const [balanceData, setBalanceData] = useState<any>(null);
+  const [balanceData, setBalanceData] = useState<BalanceData | null>(null);
   const [priceData, setPriceData] = useState<any>(null);
+  const [logs, setLogs] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  // Connect to WebSocket
+  const addLog = useCallback((message: string, isError = false) => {
+    if (!enableLogs) return;
+    
+    const timestamp = new Date().toLocaleTimeString();
+    setLogs(prev => [...prev, `[${timestamp}] ${message}`]);
+    
+    if (isError) {
+      setError(message);
+    }
+  }, [enableLogs]);
+
   const connect = useCallback(() => {
-    const newSocket = io('http://localhost:8000', {
-      transports: ['websocket', 'polling'],
+    if (socket) {
+      socket.disconnect();
+    }
+
+    const newSocket = io('http://localhost:8000/balance', {
+      transports: ['websocket', 'polling']
     });
 
     newSocket.on('connect', () => {
-      console.log('Connected to WebSocket');
       setIsConnected(true);
       setError(null);
+      addLog('✅ Connected to WebSocket server');
+      
+      // Auto subscribe if wallet address and token mints are provided
+      if (walletAddress && tokenMints) {
+        const mints = tokenMints.split(',').map(mint => mint.trim()).filter(Boolean);
+        
+        // Subscribe to balance updates
+        newSocket.emit('subscribeBalance', {
+          walletAddress: walletAddress.trim(),
+          tokenMints: mints
+        });
+        
+        // Subscribe to price updates
+        newSocket.emit('subscribePrice', {
+          tokenMints: mints
+        });
+        
+        addLog(`🔔 Auto-subscribed to balance for wallet: ${walletAddress}`);
+        addLog(`📈 Auto-subscribed to price updates`);
+        addLog(`🪙 Token mints: ${mints.join(', ')}`);
+      }
     });
 
     newSocket.on('disconnect', () => {
-      console.log('Disconnected from WebSocket');
       setIsConnected(false);
+      addLog('❌ Disconnected from WebSocket server');
     });
 
-    newSocket.on('balanceUpdate', (data) => {
-      console.log('Balance update:', data);
+    newSocket.on('balanceUpdate', (data: BalanceData) => {
       setBalanceData(data);
+      addLog(`💰 Balance updated for ${data.walletAddress}`);
     });
 
-    newSocket.on('priceUpdate', (data) => {
-      console.log('Price update:', data);
+    newSocket.on('priceUpdate', (data: any) => {
       setPriceData(data);
+      addLog(`📈 Price updated`);
     });
 
-    newSocket.on('error', (err) => {
-      console.error('WebSocket error:', err);
-      setError(err.message);
+    newSocket.on('error', (error: { message: string }) => {
+      addLog(`❌ Error: ${error.message}`, true);
     });
 
     setSocket(newSocket);
-  }, []);
+  }, [walletAddress, tokenMints, addLog]);
 
-  // Disconnect from WebSocket
   const disconnect = useCallback(() => {
     if (socket) {
       socket.disconnect();
@@ -95,101 +155,322 @@ export const useWsWalletBalance = () => {
     }
   }, [socket]);
 
-  // Subscribe to balance updates
-  const subscribeBalance = useCallback((walletAddress: string, tokenMints: string[] = []) => {
-    if (socket && isConnected) {
-      socket.emit('subscribeBalance', {
-        walletAddress,
-        tokenMints,
-      });
+  const subscribeBalance = useCallback((walletAddr: string, mints: string[] = []) => {
+    if (!socket || !isConnected) {
+      addLog('❌ Not connected to server', true);
+      return;
     }
-  }, [socket, isConnected]);
 
-  // Subscribe to price updates
-  const subscribePrice = useCallback((tokenMints: string[] = []) => {
-    if (socket && isConnected) {
-      socket.emit('subscribePrice', {
-        tokenMints,
-      });
-    }
-  }, [socket, isConnected]);
+    socket.emit('subscribeBalance', {
+      walletAddress: walletAddr.trim(),
+      tokenMints: mints
+    });
 
-  // Auto-connect on mount
+    socket.emit('subscribePrice', {
+      tokenMints: mints
+    });
+
+    addLog(`🔔 Subscribed to balance for wallet: ${walletAddr}`);
+    addLog(`📈 Subscribed to price updates`);
+    addLog(`🪙 Token mints: ${mints.join(', ')}`);
+  }, [socket, isConnected, addLog]);
+
+  const clearLogs = useCallback(() => {
+    setLogs([]);
+  }, []);
+
+  // Auto connect on mount if enabled
   useEffect(() => {
-    connect();
-    return () => disconnect();
-  }, [connect, disconnect]);
+    if (autoConnect) {
+      connect();
+    }
+
+    return () => {
+      if (socket) {
+        socket.close();
+      }
+    };
+  }, [autoConnect, connect]);
+
+  // Reconnect when walletAddress or tokenMints change
+  useEffect(() => {
+    if (autoConnect && (walletAddress || tokenMints)) {
+      connect();
+    }
+  }, [walletAddress, tokenMints, autoConnect, connect]);
 
   return {
+    // State
     socket,
     isConnected,
     balanceData,
     priceData,
+    logs,
     error,
+    
+    // Actions
     connect,
     disconnect,
     subscribeBalance,
-    subscribePrice,
+    clearLogs,
+    
+    // Utilities
+    addLog,
   };
 };
+
 ```
 
 ### 2. Sử dụng Hook trong Component
 
 ```typescript
-import React from 'react';
-import { useWsWalletBalance } from './hooks/useWsWalletBalance';
+"use client";
 
-const WalletBalanceComponent = () => {
-  const {
-    isConnected,
-    balanceData,
-    priceData,
-    error,
-    subscribeBalance,
-    subscribePrice
-  } = useWsWalletBalance();
+import { useState } from 'react';
+import Head from 'next/head';
+import { useWebSocketBalance } from '@/hooks/useWebSocketBalance';
 
-  const handleSubscribeBalance = () => {
-    subscribeBalance('EbMmX3wPCGQvpaLfFLHAKtPn9T9JjrHc1CdaxyJ5Ef6z', [
-      'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v', // USDC
-      'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263'  // BONK
-    ]);
+interface TokenBalance {
+  amount: number;
+  priceUSD: number;
+  valueUSD: number;
+}
+
+interface BalanceData {
+  walletAddress: string;
+  sol: TokenBalance;
+  [key: string]: TokenBalance | string | number;
+  totalValueUSD: number;
+}
+
+export default function WebSocketTest() {
+  const [walletAddress, setWalletAddress] = useState('EbMmX3wPCGQvpaLfFLHAKtPn9T9JjrHc1CdaxyJ5Ef6z');
+  const [tokenMints, setTokenMints] = useState('6p6xgHyF7AeE6TZkSmFsko444wqoP15icUSqi2jfGiPN,5c74v6Px9RKwdGWCfqLGfEk7UZfE3Y4qJbuYrLbVG63V,GJZJsDnJaqGuGxgARRYNhzBWEzfST4sngHKLP2nppump');
+
+  // Use the custom hook
+  const { isConnected, balanceData, priceData, logs, error, subscribeBalance, disconnect, clearLogs } = useWebSocketBalance({
+    walletAddress,
+    tokenMints,
+    autoConnect: true,
+    enableLogs: true,
+  });
+
+  const handleSubscribe = () => {
+    const mints = tokenMints.split(',').map(mint => mint.trim()).filter(Boolean);
+    subscribeBalance(walletAddress, mints);
   };
 
-  const handleSubscribePrice = () => {
-    subscribePrice([
-      'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v', // USDC
-      'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263'  // BONK
-    ]);
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 6,
+      maximumFractionDigits: 12
+    }).format(value);
+  };
+
+  const formatNumber = (value: number) => {
+    return new Intl.NumberFormat('en-US', {
+      minimumFractionDigits: 6,
+      maximumFractionDigits: 12
+    }).format(value);
   };
 
   return (
-    <div>
-      <p>Status: {isConnected ? 'Connected' : 'Disconnected'}</p>
-      {error && <p>Error: {error}</p>}
+    <>
+      <Head>
+        <title>WebSocket Balance Test</title>
+      </Head>
       
-      {balanceData && (
-        <div>
-          <h3>Balance: ${balanceData.totalValueUSD?.toFixed(2)}</h3>
-          <p>SOL: {balanceData.sol?.amount} (${balanceData.sol?.valueUSD?.toFixed(2)})</p>
+      <div className="min-h-screen bg-gray-100 py-8">
+        <div className="max-w-6xl mx-auto px-4">
+          <div className="bg-white rounded-lg shadow-lg p-8">
+            <h1 className="text-3xl font-bold text-center text-gray-800 mb-8">
+              🚀 WebSocket Balance Test
+            </h1>
+
+            {/* Connection Status */}
+            <div className={`p-4 rounded-lg mb-6 ${
+              isConnected 
+                ? 'bg-green-100 border border-green-300 text-green-800' 
+                : 'bg-red-100 border border-red-300 text-red-800'
+            }`}>
+              <div className="flex items-center">
+                <div className={`w-3 h-3 rounded-full mr-3 ${
+                  isConnected ? 'bg-green-500' : 'bg-red-500'
+                }`}></div>
+                <span className="font-semibold">
+                  {isConnected ? 'Connected' : 'Disconnected'}
+                </span>
+              </div>
+            </div>
+
+            {/* Configuration */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Wallet Address
+                </label>
+                <input
+                  type="text"
+                  value={walletAddress}
+                  onChange={(e) => setWalletAddress(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Enter Solana wallet address"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Server Status
+                </label>
+                <div className="px-3 py-2 bg-gray-100 border border-gray-300 rounded-md">
+                  <span className="text-sm text-gray-600">
+                    Connected to: http://localhost:8000/balance
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Token Mints (comma separated)
+              </label>
+              <input
+                type="text"
+                value={tokenMints}
+                onChange={(e) => setTokenMints(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="6p6xgHyF7AeE6TZkSmFsko444wqoP15icUSqi2jfGiPN,5c74v6Px9RKwdGWCfqLGfEk7UZfE3Y4qJbuYrLbVG63V,GJZJsDnJaqGuGxgARRYNhzBWEzfST4sngHKLP2nppump"
+              />
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-4 mb-8">
+              <button
+                onClick={handleSubscribe}
+                disabled={!isConnected}
+                className={`px-6 py-3 rounded-lg font-medium ${
+                  isConnected
+                    ? 'bg-green-600 hover:bg-green-700 text-white'
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                }`}
+              >
+                �� Subscribe to Balance
+              </button>
+              
+              <button
+                onClick={disconnect}
+                className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium"
+              >
+                Disconnect
+              </button>
+
+              <button
+                onClick={clearLogs}
+                className="px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium"
+              >
+                Clear Logs
+              </button>
+            </div>
+
+            {/* Balance Display */}
+            {balanceData && (
+              <div className="bg-gray-50 rounded-lg p-6 mb-8">
+                <h2 className="text-xl font-bold text-gray-800 mb-4">
+                  💰 Wallet Balance
+                </h2>
+                
+                <div className="space-y-4">
+                  {/* SOL Balance */}
+                  <div className="bg-white rounded-lg p-4 border border-gray-200">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <span className="font-semibold text-gray-800">SOL</span>
+                        <p className="text-sm text-gray-600">
+                          {formatNumber(balanceData.sol.amount)} SOL
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-lg font-bold text-green-600">
+                          {formatCurrency(balanceData.sol.valueUSD)}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          @ {formatCurrency(balanceData.sol.priceUSD)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Other Tokens */}
+                  {Object.entries(balanceData).map(([key, value]) => {
+                    if (key === 'walletAddress' || key === 'sol' || key === 'totalValueUSD') return null;
+                    
+                    const token = value as TokenBalance;
+                    return (
+                      <div key={key} className="bg-white rounded-lg p-4 border border-gray-200">
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <span className="font-semibold text-gray-800">
+                              {key.substring(0, 8)}...
+                            </span>
+                            <p className="text-sm text-gray-600">
+                              {formatNumber(token.amount)} tokens
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-lg font-bold text-green-600">
+                              {formatCurrency(token.valueUSD)}
+                            </p>
+                            <p className="text-sm text-gray-500">
+                              @ {formatCurrency(token.priceUSD)}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {/* Total Value */}
+                  <div className="bg-blue-600 text-white rounded-lg p-4 text-center">
+                    <p className="text-sm opacity-90">Total Portfolio Value</p>
+                    <p className="text-2xl font-bold">
+                      {formatCurrency(balanceData.totalValueUSD)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Price Display */}
+            {priceData && (
+              <div className="bg-gray-50 rounded-lg p-6 mb-8">
+                <h2 className="text-xl font-bold text-gray-800 mb-4">
+                  📈 Price Updates
+                </h2>
+                <pre className="bg-white rounded-lg p-4 border border-gray-200 overflow-auto max-h-64 text-sm">
+                  {JSON.stringify(priceData, null, 2)}
+                </pre>
+              </div>
+            )}
+
+            {/* Logs */}
+            <div className="bg-gray-900 text-green-400 rounded-lg p-4 max-h-64 overflow-y-auto">
+              <h3 className="text-lg font-semibold mb-3 text-white">📝 Logs</h3>
+              <div className="space-y-1">
+                {logs.map((log, index) => (
+                  <div key={index} className="text-sm font-mono">
+                    {log}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
-      )}
-      
-      {priceData && (
-        <div>
-          <h3>Prices:</h3>
-          {Object.entries(priceData.prices).map(([token, price]) => (
-            <p key={token}>{token}: ${price}</p>
-          ))}
-        </div>
-      )}
-      
-      <button onClick={handleSubscribeBalance}>Subscribe Balance</button>
-      <button onClick={handleSubscribePrice}>Subscribe Price</button>
-    </div>
+      </div>
+    </>
   );
-};
+}
 ```
 
 ### 3. Vanilla JavaScript
