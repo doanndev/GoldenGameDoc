@@ -94,20 +94,36 @@ Rút SOL hoặc USDT từ ví người dùng.
 
 **Các loại lỗi có thể xảy ra:**
 
-**400 Bad Request:**
-- `"Coin {currency_symbol} not found or inactive"` - Coin không tồn tại hoặc không active
-- `"Insufficient balance"` - Số dư không đủ (từ wallet-history.service.ts)
-- `"Insufficient SOL balance. Required: {required} SOL, Available: {available} SOL"` - Số dư SOL không đủ (bao gồm phí giao dịch)
-- `"Token account not found"` - Không tìm thấy token account
-- `"Token mint not found"` - Không tìm thấy token mint
-- `"Insufficient token balance. Required: {required}, Available: {available}"` - Số dư token không đủ
-- `"Insufficient SOL balance for transaction fee"` - Không đủ SOL để trả phí giao dịch
-- `"Source token account not found"` - Không tìm thấy source token account
-- `"Failed to get token balance: {error}"` - Lỗi khi lấy số dư token
-- `"Failed to get mint info: {error}"` - Lỗi khi lấy thông tin mint
-- `"Insufficient SOL for ATA creation. Need at least {fee} SOL, but only have {balance} SOL."` - Không đủ SOL để tạo ATA
+#### 400 Bad Request - Validation & Business Logic Errors
+- **Address validation**: 
+  - `"Invalid destination wallet address"` - Địa chỉ ví đích không hợp lệ
+  - `"Cannot transfer to the same wallet address"` - Không thể chuyển trùng với ví đang chuyển
+- **Coin validation**: 
+  - `"Coin {currency_symbol} not found, inactive, or not withdrawable"` - Coin không tồn tại, không active hoặc không thể rút
+- **Balance checks**: 
+  - `"Insufficient balance"` (generic) - Số dư không đủ
+  - `"Insufficient SOL balance. Required: {required} SOL, Available: {available} SOL"` - Số dư SOL không đủ (bao gồm phí giao dịch)
+  - `"Insufficient token balance. Required: {required}, Available: {available}"` - Số dư token không đủ
+  - `"Insufficient SOL balance for transaction fee"` - Không đủ SOL để trả phí giao dịch
+  - `"Insufficient SOL for transaction fee"` - Ví chưa được funded (không có SOL)
+- **Token account errors**:
+  - `"Token account not found"` - Không tìm thấy token account
+  - `"Source token account not found"` - Không tìm thấy source token account
+  - `"Token mint not found"` - Không tìm thấy token mint
+- **ATA creation errors**:
+  - `"Insufficient SOL for ATA creation. Need at least {fee} SOL, but only have {balance} SOL."` - Không đủ SOL để tạo Associated Token Account
+- **Blockchain errors**:
+  - `"Failed to get token balance: {error}"` - Lỗi khi lấy số dư token
+  - `"Failed to get mint info: {error}"` - Lỗi khi lấy thông tin mint
+  - `"Token balance check failed: {error}"` - Lỗi kiểm tra số dư token (Token-2022)
+- **Wallet errors**:
+  - `"Import wallet not found"` - Không tìm thấy ví import
 
-**500 Internal Server Error:**
+#### 401 Unauthorized
+- Token không hợp lệ hoặc hết hạn
+- Thiếu Authorization header
+
+#### 500 Internal Server Error
 - `"Internal server error occurred during withdrawal error: {error.message}"` - Lỗi server không xác định
 - `"SOLANA_RPC_URL is not configured in environment variables"` - Chưa cấu hình RPC URL
 
@@ -302,32 +318,36 @@ curl -X GET "http://localhost:3000/wallet-histories/withdraw-history?search=SOL&
 
 #### 400 Bad Request - Validation & Business Logic Errors
 - **Address validation**: 
-  - `"Invalid destination wallet address"`
-  - `"Cannot transfer to the same wallet address"`
-- **Coin validation**: `"Coin {currency_symbol} not found or inactive"`
+  - `"Invalid destination wallet address"` - Địa chỉ ví đích không hợp lệ
+  - `"Cannot transfer to the same wallet address"` - Không thể chuyển trùng với ví đang chuyển
+- **Coin validation**: 
+  - `"Coin {currency_symbol} not found, inactive, or not withdrawable"` - Coin không tồn tại, không active hoặc không thể rút
 - **Balance checks**: 
-  - `"Insufficient balance"` (generic)
-  - `"Insufficient SOL balance. Required: {required} SOL, Available: {available} SOL"`
-  - `"Insufficient token balance. Required: {required}, Available: {available}"`
-  - `"Insufficient SOL balance for transaction fee"`
-  - `"Insufficient SOL for transaction fee"` (ví chưa được funded)
+  - `"Insufficient balance"` (generic) - Số dư không đủ
+  - `"Insufficient SOL balance. Required: {required} SOL, Available: {available} SOL"` - Số dư SOL không đủ (bao gồm phí giao dịch)
+  - `"Insufficient token balance. Required: {required}, Available: {available}"` - Số dư token không đủ
+  - `"Insufficient SOL balance for transaction fee"` - Không đủ SOL để trả phí giao dịch
+  - `"Insufficient SOL for transaction fee"` - Ví chưa được funded (không có SOL)
 - **Token account errors**:
-  - `"Token account not found"`
-  - `"Source token account not found"`
-  - `"Token mint not found"`
+  - `"Token account not found"` - Không tìm thấy token account
+  - `"Source token account not found"` - Không tìm thấy source token account
+  - `"Token mint not found"` - Không tìm thấy token mint
 - **ATA creation errors**:
-  - `"Insufficient SOL for ATA creation. Need at least {fee} SOL, but only have {balance} SOL."`
+  - `"Insufficient SOL for ATA creation. Need at least {fee} SOL, but only have {balance} SOL."` - Không đủ SOL để tạo Associated Token Account
 - **Blockchain errors**:
-  - `"Failed to get token balance: {error}"`
-  - `"Failed to get mint info: {error}"`
+  - `"Failed to get token balance: {error}"` - Lỗi khi lấy số dư token
+  - `"Failed to get mint info: {error}"` - Lỗi khi lấy thông tin mint
+  - `"Token balance check failed: {error}"` - Lỗi kiểm tra số dư token (Token-2022)
+- **Wallet errors**:
+  - `"Import wallet not found"` - Không tìm thấy ví import
 
 #### 401 Unauthorized
 - Token không hợp lệ hoặc hết hạn
 - Thiếu Authorization header
 
 #### 500 Internal Server Error
-- `"Internal server error occurred during withdrawal error: {error.message}"` - Lỗi không xác định
-- `"SOLANA_RPC_URL is not configured in environment variables"` - Cấu hình thiếu
+- `"Internal server error occurred during withdrawal error: {error.message}"` - Lỗi server không xác định
+- `"SOLANA_RPC_URL is not configured in environment variables"` - Chưa cấu hình RPC URL
 
 ### Blockchain Integration
 - Tự động kiểm tra số dư trước khi rút
