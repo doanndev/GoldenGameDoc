@@ -36,12 +36,12 @@ Content-Type: application/json
 #### Request Body
 ```json
 {
-  "option": "sell",
-  "coin_symbol": "USDT",
-  "amount": 1000,
-  "price": 0.1,
-  "price_min": 0.09,
-  "price_max": 0.11
+  "option": "buy",
+  "coin_symbol": "USDT",                    
+  "amount": 200.0,
+  "price": 0.4,
+  "price_min": 0.0031,
+  "price_max": 0.06
 }
 ```
 
@@ -59,47 +59,23 @@ Content-Type: application/json
 #### Response Success (201)
 ```json
 {
-  "id": 1,
-  "user_id": 123,
-  "coin_id": 3,
-  "adv_code": "ABC12345",
-  "option": "sell",
-  "coin_buy": 2,
-  "coin_sell": null,
-  "amount": 1000,
-  "amount_remaining": 1000,
-  "price": 0.1,
-  "price_min": 0.09,
-  "price_max": 0.11,
-  "main_wallet_id": 1,
-  "import_wallet_id": null,
-  "status": "pending",
-  "tx_hash": "5J7K8L9M...",
-  "created_at": "2024-01-15T10:30:00Z",
-  "user": {
-    "id": 123,
-    "username": "user123",
-    "fullname": "John Doe"
-  },
-  "coin": {
-    "id": 3,
-    "name": "MPB Token",
-    "symbol": "MPB",
-    "logo": "https://via.placeholder.com/64x64/4F46E5/FFFFFF?text=MPB"
-  },
-  "coin_buy_relation": {
-    "id": 2,
-    "name": "Tether USD",
-    "symbol": "USDT",
-    "logo": "https://..."
-  },
-  "coin_sell_relation": null,
-  "main_wallet": {
-    "id": 1,
-    "address": "ABC123...",
-    "name": "Main Wallet"
-  },
-  "import_wallet": null
+    "user_id": 142859,
+    "coin_id": 3,
+    "adv_code": "K0QHEMMF",
+    "option": "buy",
+    "coin_buy": null,
+    "coin_sell": 2,
+    "amount": 200,
+    "amount_remaining": 200,
+    "price": 0.4,
+    "price_min": 0.0031,
+    "price_max": 0.06,
+    "main_wallet_id": 285716,
+    "import_wallet_id": null,
+    "status": "pending",
+    "tx_hash": "5dXJpHzCr1BxuvKc8M16TncnxXoEYtZfWmmar2gErbohGo9p58dSpPABxJHDG9NaG7cb4RXiQ6ZgK1NL1arf9P7L",
+    "id": 98,
+    "created_at": "2025-09-22T10:33:44.490Z"
 }
 ```
 
