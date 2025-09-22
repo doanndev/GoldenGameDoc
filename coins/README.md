@@ -27,6 +27,7 @@ coins/
 - **Auto-initialization**: Tự động khởi tạo SOL và USDT khi module start
 - **Danh sách coins**: Lấy danh sách coins hỗ trợ từ database
 - **Tokens withdraw**: Lấy thông tin token SOL/USDT cho withdrawal (không cần database)
+- **Main coins**: Lấy 3 đồng coin chính SOL, USDT và MPB
 - **Tìm kiếm**: Tìm kiếm coin theo tên, symbol
 - **Filter**: Lọc theo trạng thái active/inactive/all
 - **Sort**: Sắp xếp theo symbol A-Z
@@ -45,6 +46,7 @@ coins/
 | `website` | `varchar` | Website chính thức |
 | `mint` | `varchar` | Mint address trên Solana |
 | `status` | `enum` | 'active' hoặc 'inactive' |
+| `isWithdraw` | `boolean` | Có thể rút được hay không (default: false) |
 
 ## 🔗 API Endpoints
 
@@ -58,7 +60,7 @@ coins/
 
 ### 2. Lấy thông tin token cho withdrawal
 
-**GET** `/coins/tokens-withdraw` - Lấy thông tin token SOL/USDT cho withdrawal (không cần database)
+**GET** `/coins/tokens-withdraw` - Lấy thông tin token có thể rút được từ database
 
 **Headers:** Không cần authentication
 
@@ -72,7 +74,8 @@ coins/
     "mint": "So11111111111111111111111111111111111111112",
     "logo": "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png",
     "website": "https://solana.com",
-    "status": "active"
+    "status": "active",
+    "isWithdraw": true
   },
   {
     "id": 2,
@@ -81,7 +84,50 @@ coins/
     "mint": "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB",
     "logo": "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB/logo.svg",
     "website": "https://tether.to",
-    "status": "active"
+    "status": "active",
+    "isWithdraw": true
+  }
+]
+```
+
+### 3. Lấy 3 đồng coin chính (SOL, USDT, MPB)
+
+**GET** `/coins/main-coins` - Lấy thông tin 3 đồng coin chính: SOL, USDT và MPB
+
+**Headers:** Không cần authentication
+
+**Response Success (200):**
+```json
+[
+  {
+    "id": 1,
+    "name": "Solana",
+    "symbol": "SOL",
+    "mint": "So11111111111111111111111111111111111111112",
+    "logo": "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png",
+    "website": "https://solana.com",
+    "status": "active",
+    "isWithdraw": true
+  },
+  {
+    "id": 2,
+    "name": "Tether USD",
+    "symbol": "USDT",
+    "mint": "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB",
+    "logo": "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB/logo.svg",
+    "website": "https://tether.to",
+    "status": "active",
+    "isWithdraw": true
+  },
+  {
+    "id": 3,
+    "name": "MPB Token",
+    "symbol": "MPB",
+    "mint": "MPBToken1111111111111111111111111111111111111111",
+    "logo": "https://via.placeholder.com/64x64/4F46E5/FFFFFF?text=MPB",
+    "website": "https://mpb.com",
+    "status": "active",
+    "isWithdraw": true
   }
 ]
 ```
@@ -104,7 +150,8 @@ GET /coins
     "mint": "So11111111111111111111111111111111111111112",
     "logo": "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png",
     "website": "https://solana.com",
-    "status": "active"
+    "status": "active",
+    "isWithdraw": true
   },
   {
     "id": 2,
@@ -113,7 +160,8 @@ GET /coins
     "mint": "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB",
     "logo": "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB/logo.svg",
     "website": "https://tether.to",
-    "status": "active"
+    "status": "active",
+    "isWithdraw": true
   }
 ]
 ```
@@ -126,14 +174,22 @@ GET /coins/tokens-withdraw
 
 **Response:** Tương tự như trên nhưng luôn trả về 2 tokens SOL và USDT
 
-### 3. Tìm kiếm coin trong database
+### 3. Lấy 3 đồng coin chính (SOL, USDT, MPB)
+
+```bash
+GET /coins/main-coins
+```
+
+**Response:** Trả về 3 đồng coin chính: SOL, USDT và MPB (sắp xếp theo symbol)
+
+### 4. Tìm kiếm coin trong database
 
 ```bash
 GET /coins?search=SOL
 GET /coins?search=Solana
 ```
 
-### 4. Lọc theo trạng thái
+### 5. Lọc theo trạng thái
 
 ```bash
 GET /coins?status=all
@@ -154,9 +210,9 @@ GET /coins?status=inactive
 - **Status filtering**: Mặc định chỉ trả về coins có status `active`
 - **Search**: Tìm kiếm case-insensitive theo tên và symbol
 - **Sort**: Kết quả được sắp xếp theo symbol A-Z
-- **API `/coins/tokens-withdraw`**: Không cần authentication, luôn trả về SOL và USDT
+- **API `/coins/tokens-withdraw`**: Không cần authentication, chỉ trả về token có `isWithdraw = true` và `status = 'active'`
 - **`TOKEN_DATA_WITHDRAW`**: Constant readonly, sử dụng spread operator `[...TOKEN_DATA_WITHDRAW]` để tạo copy
-- **Performance**: API tokens-withdraw nhanh hơn vì không truy vấn database
+- **Performance**: API tokens-withdraw truy vấn database để lấy token có thể rút được
 
 ## 🚀 Khởi tạo mặc định
 
@@ -175,9 +231,9 @@ Khi module khởi động, hệ thống sẽ tự động tạo 2 coins:
 ## 🔗 Tích hợp với modules khác
 
 ### Wallet Histories Module
-- **Trước:** Sử dụng `Coin` entity để lưu thông tin coin trong withdrawal history
-- **Sau:** Sử dụng `TOKEN_DATA_WITHDRAW` constant để lấy thông tin coin (không cần database)
-- **Lợi ích:** Nhanh hơn, ổn định hơn, không phụ thuộc database
+- **Trước:** Sử dụng `TOKEN_DATA_WITHDRAW` constant để lấy thông tin coin
+- **Sau:** Sử dụng `Coin` entity để lấy thông tin coin từ database với điều kiện `isWithdraw = true`
+- **Lợi ích:** Linh hoạt hơn, có thể kiểm soát token nào được phép rút
 
 ### Blockchain Service
 - Sử dụng `mint` address để xác định coin trên Solana blockchain
@@ -203,6 +259,7 @@ Khi module khởi động, hệ thống sẽ tự động tạo 2 coins:
 - [x] Service với auto-initialization
 - [x] Controller với GET endpoint
 - [x] **API `/coins/tokens-withdraw`** - Lấy token cho withdrawal
+- [x] **API `/coins/main-coins`** - Lấy 3 đồng coin chính SOL, USDT, MPB
 - [x] **`TOKEN_DATA_WITHDRAW` constant** - Dữ liệu tái sử dụng
 - [x] Module configuration
 - [x] Documentation đầy đủ
