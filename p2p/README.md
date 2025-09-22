@@ -50,7 +50,7 @@ Content-Type: application/json
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `option` | string | Yes | Loại giao dịch: `"buy"` hoặc `"sell"` |
-| `coin_symbol` | string | Yes | Symbol coin đối tác (VD: "USDT", "SOL") |
+| `coin_symbol` | string | Yes | Symbol coin đối tác (chỉ hỗ trợ: "USDT", "SOL") |
 | `amount` | number | Yes | Số lượng MPB muốn mua/bán |
 | `price` | number | Yes | Giá mỗi đơn vị |
 | `price_min` | number | Yes | Giá tối thiểu chấp nhận |
@@ -92,7 +92,7 @@ Content-Type: application/json
 
 **422 Validation Error**
 - `option must be one of the following values: buy, sell`
-- `coin_symbol should not be empty`
+- `coin_symbol only supports USDT or SOL`
 - `amount must be a positive number`
 
 **500 Internal Server Error**
@@ -151,6 +151,7 @@ Content-Type: application/json
 | `option` | string | No | - | Filter theo loại: `"buy"` hoặc `"sell"` |
 | `coin_buy` | string | No | - | Filter theo symbol coin mua (VD: "USDT") |
 | `coin_sell` | string | No | - | Filter theo symbol coin bán (VD: "SOL") |
+| `payment_coin` | string | No | - | Filter theo coin thanh toán: "USDT" hoặc "SOL" |
 | `price_min` | number | No | - | Giá tối thiểu |
 | `price_max` | number | No | - | Giá tối đa |
 | `status` | string | No | `"executed"` | Trạng thái: `"pending"`, `"executed"`, `"failed"` |
@@ -244,6 +245,11 @@ curl -X GET "http://localhost:3000/p2p/order-books?price_min=0.1&price_max=0.2"
 curl -X GET "http://localhost:3000/p2p/order-books?page=2&limit=20"
 ```
 
+**Filter theo coin thanh toán:**
+```bash
+curl -X GET "http://localhost:3000/p2p/order-books?payment_coin=USDT"
+```
+
 **Kết hợp nhiều filter:**
 ```bash
 curl -X GET "http://localhost:3000/p2p/order-books?option=sell&coin_buy=USDT&price_min=0.1&price_max=0.2&status=executed&page=1&limit=10"
@@ -262,6 +268,7 @@ curl -X GET "http://localhost:3000/p2p/order-books?option=sell&coin_buy=USDT&pri
 - **Price range**: Filter theo khoảng giá
 - **Status filtering**: Lọc theo trạng thái giao dịch
 - **Coin filtering**: Filter theo coin chính và coin đối tác
+- **Payment coin filtering**: Filter theo coin thanh toán (USDT/SOL)
 
 ### Pagination
 - **Flexible pagination**: Hỗ trợ page/limit
@@ -307,6 +314,7 @@ curl -X GET "http://localhost:3000/p2p/order-books?option=sell&coin_buy=USDT&pri
 ## 🛡️ Security
 
 - **Input validation**: Validate tất cả input với class-validator
+- **Coin symbol validation**: Chỉ cho phép USDT và SOL
 - **SQL injection protection**: Sử dụng parameterized queries
 - **Rate limiting**: Có thể áp dụng rate limiting
 - **JWT authentication**: Bảo mật API endpoints
