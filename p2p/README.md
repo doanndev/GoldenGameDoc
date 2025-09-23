@@ -154,8 +154,9 @@ Content-Type: application/json
 | `payment_coin` | string | No | - | Filter theo coin thanh toán: "USDT" hoặc "SOL" |
 | `price_min` | number | No | - | Giá tối thiểu |
 | `price_max` | number | No | - | Giá tối đa |
-| `status` | string | No | `"executed"` | Trạng thái: `"pending"`, `"executed"`, `"failed"` |
+| `status` | string | No | `"pending"` | Trạng thái: `"pending"`, `"executed"`, `"failed"` |
 | `search` | string | No | - | Tìm kiếm theo adv_code, username, fullname |
+| `reverse_view` | boolean | No | `true` | Hiển thị option từ góc độ người xem |
 | `page` | number | No | `1` | Trang hiện tại |
 | `limit` | number | No | `10` | Số item/trang (max: 100) |
 
@@ -192,13 +193,12 @@ Content-Type: application/json
         "symbol": "MPB",
         "logo": "https://via.placeholder.com/64x64/4F46E5/FFFFFF?text=MPB"
       },
-      "coin_buy_relation": {
+      "payment_coin": {
         "id": 2,
         "name": "Tether USD",
         "symbol": "USDT",
         "logo": "https://..."
       },
-      "coin_sell_relation": null,
       "main_wallet": {
         "id": 1,
         "address": "ABC123...",
@@ -250,9 +250,14 @@ curl -X GET "http://localhost:3000/p2p/order-books?page=2&limit=20"
 curl -X GET "http://localhost:3000/p2p/order-books?payment_coin=USDT"
 ```
 
+**Hiển thị từ góc độ người tạo quảng cáo:**
+```bash
+curl -X GET "http://localhost:3000/p2p/order-books?reverse_view=false"
+```
+
 **Kết hợp nhiều filter:**
 ```bash
-curl -X GET "http://localhost:3000/p2p/order-books?option=sell&coin_buy=USDT&price_min=0.1&price_max=0.2&status=executed&page=1&limit=10"
+curl -X GET "http://localhost:3000/p2p/order-books?option=sell&coin_buy=USDT&price_min=0.1&price_max=0.2&status=executed&reverse_view=true&page=1&limit=10"
 ```
 
 ## 🔧 Tính năng chính
@@ -262,6 +267,7 @@ curl -X GET "http://localhost:3000/p2p/order-books?option=sell&coin_buy=USDT&pri
 - **Tự động nhận diện**: Service tự động xác định coin dựa trên option
 - **Mã quảng cáo duy nhất**: Tự động tạo mã 8 ký tự không trùng lặp
 - **Blockchain integration**: Tự động tạo smart contract trên Solana
+- **Góc độ hiển thị**: Mặc định hiển thị từ góc độ người xem (reverse_view=true)
 
 ### Advanced Filtering
 - **Multi-field search**: Tìm kiếm trong adv_code, username, fullname
@@ -269,6 +275,7 @@ curl -X GET "http://localhost:3000/p2p/order-books?option=sell&coin_buy=USDT&pri
 - **Status filtering**: Lọc theo trạng thái giao dịch
 - **Coin filtering**: Filter theo coin chính và coin đối tác
 - **Payment coin filtering**: Filter theo coin thanh toán (USDT/SOL)
+- **View perspective**: Hiển thị option từ góc độ người xem hoặc người tạo
 
 ### Pagination
 - **Flexible pagination**: Hỗ trợ page/limit
@@ -286,8 +293,8 @@ curl -X GET "http://localhost:3000/p2p/order-books?option=sell&coin_buy=USDT&pri
 | `coin_id` | `integer` | ID coin chính (luôn là MPB) |
 | `adv_code` | `varchar(8)` | Mã quảng cáo duy nhất |
 | `option` | `enum` | 'buy' hoặc 'sell' |
-| `coin_buy` | `integer` | ID coin mua (nếu option = 'sell') |
-| `coin_sell` | `integer` | ID coin bán (nếu option = 'buy') |
+| `coin_buy` | `integer` | ID coin nhận (nếu option = 'sell') |
+| `coin_sell` | `integer` | ID coin dùng để mua (nếu option = 'buy') |
 | `amount` | `decimal` | Số lượng |
 | `amount_remaining` | `decimal` | Số lượng còn lại |
 | `price` | `decimal` | Giá |
