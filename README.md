@@ -14,6 +14,7 @@ Hệ thống backend cung cấp các API cho:
 
 - **Nhật:** https://dp7vlq3z-8000.asse.devtunnels.ms/api/v1
 - **Quý:** https://k6z4r6s6-8080.asse.devtunnels.ms/api/v1
+- **Triệu:** https://8w7n4n91-8008.asse.devtunnels.ms/api/v1
 
 ## Cài đặt dự án
 
