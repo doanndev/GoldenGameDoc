@@ -141,15 +141,13 @@ Lấy danh sách các giao dịch swap theo trạng thái và loại coin.
 #### Query Parameters
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `coin_send` | string | No | ID hoặc symbol của coin gửi (VD: `1` hoặc `SOL`) |
-| `coin_received` | string | No | ID hoặc symbol của coin nhận (VD: `2` hoặc `MPB`) |
 | `status` | enum | No | Trạng thái: pending, executed, failed |
 | `page` | number | No | Số trang (mặc định: 1) |
 | `limit` | number | No | Số lượng item per page (mặc định: 10) |
 
 #### Example Request
 ```
-GET /swaps/get-swaps-by-status-and-coin?status=pending&coin_send=1&coin_received=2&page=1&limit=10
+GET /swaps/get-swaps-by-status-and-coin?status=pending&page=1&limit=10
 ```
 
 #### Response Success (200)
