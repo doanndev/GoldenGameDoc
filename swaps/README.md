@@ -48,6 +48,12 @@ Nếu số dư không đủ → báo lỗi.
 
 ## API Endpoints
 
+### Urls
+
+```
+https://golden-game-be-latest.onrender.com/api/v1
+```
+
 ### Base URL
 ```
 /swaps
@@ -60,6 +66,10 @@ Authorization: Bearer <jwt_token>
 ```
 
 ---
+
+## Kiểm tra số dư của ví
+
+### `POST /swaps/check-wallet-balance`
 
 ## 1. Tạo Swap Order
 
