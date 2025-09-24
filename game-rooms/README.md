@@ -11,11 +11,11 @@ The Games API module provides functionality for managing game lists and game roo
 - **Master User Validation**: Only master users can manage game rooms
 - **Pagination Support**: Built-in pagination for game rooms listing
 
-## API Endpoints
+## ====================================================
 
-## API Endpoints
-
-### Game Lists
+```url
+url: https://8w7n4n91-8008.asse.devtunnels.ms/api/v1
+```
 
 #### Send code
 
@@ -59,41 +59,15 @@ POST /auth/login
 }
 ```
 
-```
-url: https://8w7n4n91-8008.asse.devtunnels.ms/api/v1
-```
+## API Endpoints
+
+### Game Lists
 
 ### Game Lists Controller (`/game-lists`)
 
-#### 1. Get All Game Lists
+#### 1. Create Game List
 ```http
-GET /game-rooms/get-game-lists
-```
-
-**Description**: Retrieve all active game lists
-
-**Response**:
-```json
-{
-  "message": "Game types fetched successfully",
-  "data": [
-    {
-      "id": 1,
-      "name": "Slot Machine",
-      "symbol": "SLOT"
-    },
-    {
-      "id": 2,
-      "name": "Poker",
-      "symbol": "POKER"
-    }
-  ]
-}
-```
-
-#### 2. Create Game List
-```http
-POST /game-rooms/create-list-game
+POST /
 ```
 
 **Description**: Create a new game list
@@ -125,9 +99,35 @@ POST /game-rooms/create-list-game
 }
 ```
 
+#### 2. Get All Game Lists
+```http
+GET /
+```
+
+**Description**: Retrieve all active game lists
+
+**Response**:
+```json
+{
+  "message": "Game types fetched successfully",
+  "data": [
+    {
+      "id": 1,
+      "name": "Slot Machine",
+      "symbol": "SLOT"
+    },
+    {
+      "id": 2,
+      "name": "Poker",
+      "symbol": "POKER"
+    }
+  ]
+}
+```
+
 #### 3. Get Game List by ID
 ```http
-GET /game-rooms/get-game-list/by-id?id=<:id>
+GET /find-by-id?id=<:id>
 ```
 
 **Description**: Retrieve a specific game list by ID
@@ -159,7 +159,7 @@ GET /game-rooms/get-game-list/by-id?id=<:id>
 
 #### 1. Create Game Room
 ```http
-POST /game-rooms/create-game-room
+POST /
 ```
 
 **Description**: Create a new game room with prize structure
@@ -227,7 +227,7 @@ POST /game-rooms/create-game-room
 
 #### 2. Get Game Rooms
 ```http
-GET /game-rooms/get-game-rooms
+GET /
 ```
 
 **Description**: Retrieve game rooms with pagination and filtering
@@ -281,7 +281,7 @@ GET /game-rooms/get-game-rooms
 
 #### 3. Get Game Room by ID
 ```http
-GET /game-rooms/get-game-room-by-id?id=<:id>
+GET /find-by-id?id=<:id>
 ```
 
 **Description**: Retrieve a specific game room by ID
@@ -332,7 +332,7 @@ GET /game-rooms/get-game-room-by-id?id=<:id>
 
 #### 4. Update Game Room
 ```http
-PATCH /game-rooms/update-game-room?id=<:id>
+PATCH /?id=<:id>
 ```
 
 **Description**: Update an existing game room and its prize structure
@@ -397,7 +397,7 @@ PATCH /game-rooms/update-game-room?id=<:id>
 
 #### 5. Delete Game Room
 ```http
-DELETE /game-rooms/delete-game-room?id=<:id>
+DELETE /?id=<:id>
 ```
 
 **Description**: Soft delete a game room (sets status to DELETE)
