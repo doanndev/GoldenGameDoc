@@ -17,7 +17,40 @@ The Games API module provides functionality for managing game lists and game roo
 
 ### Game Lists
 
+#### Send code
+
+```http
+POST /auth/send-code
+```
+
+```json
+{
+    "email": "truonghai9426@gmail.com"
+}
+```
+
+#### Register
+
+```http
+POST /auth/register
+```
+
+```json
+{
+  "email": "truonghai9426@gmail.com",
+  "code": "886362",
+  "username": "truonghai",
+  "fullname": "Truong Hai",
+  "password": "truonghai123!"
+}
+```
+
 #### 0. Login ưith master account
+Ví dụ:
+
+```http
+POST /auth/login
+```
 
 ```json
 {
