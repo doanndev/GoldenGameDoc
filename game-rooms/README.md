@@ -67,8 +67,7 @@ url: https://8w7n4n91-8008.asse.devtunnels.ms/api/v1
 
 #### 1. Get All Game Lists
 ```http
-GET /game-lists
-GET /game-rooms/get-game-lists (cái trên không được thì dùng cái dưới)
+GET /game-rooms/get-game-lists
 ```
 
 **Description**: Retrieve all active game lists
@@ -94,8 +93,7 @@ GET /game-rooms/get-game-lists (cái trên không được thì dùng cái dư�
 
 #### 2. Create Game List
 ```http
-POST /game-lists
-POST /game-rooms/create-list-game (cái trên không được thì dùng cái dưới)
+POST /game-rooms/create-list-game
 ```
 
 **Description**: Create a new game list
@@ -129,8 +127,7 @@ POST /game-rooms/create-list-game (cái trên không được thì dùng cái d�
 
 #### 3. Get Game List by ID
 ```http
-GET /game-lists/by-id?id=<:id>
-GET /game-rooms/get-game-list/by-id?id=<:id> (cái trên không được thì dùng cái dưới)
+GET /game-rooms/get-game-list/by-id?id=<:id>
 ```
 
 **Description**: Retrieve a specific game list by ID
