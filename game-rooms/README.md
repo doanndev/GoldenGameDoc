@@ -27,7 +27,7 @@ The Games API module provides functionality for managing game lists and game roo
 ```
 
 ```
-url: https://8w7n4n91-8008.asse.devtunnels.ms
+url: https://8w7n4n91-8008.asse.devtunnels.ms/api/v1
 ```
 
 ### Game Lists Controller (`/game-lists`)
@@ -35,6 +35,7 @@ url: https://8w7n4n91-8008.asse.devtunnels.ms
 #### 1. Get All Game Lists
 ```http
 GET /game-lists
+GET /game-rooms/get-game-lists (cái trên không được thì dùng cái dưới)
 ```
 
 **Description**: Retrieve all active game lists
@@ -61,6 +62,7 @@ GET /game-lists
 #### 2. Create Game List
 ```http
 POST /game-lists
+POST /game-rooms/create-list-game (cái trên không được thì dùng cái dưới)
 ```
 
 **Description**: Create a new game list
@@ -95,6 +97,7 @@ POST /game-lists
 #### 3. Get Game List by ID
 ```http
 GET /game-lists/by-id?id=<:id>
+GET /game-rooms/get-game-list/by-id?id=<:id> (cái trên không được thì dùng cái dưới)
 ```
 
 **Description**: Retrieve a specific game list by ID
