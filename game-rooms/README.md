@@ -44,7 +44,7 @@ POST /auth/register
   "password": "truonghai123!"
 }
 ```
-
+#### Account must master role and approved by admin
 #### 0. Login ưith master account
 Ví dụ:
 
