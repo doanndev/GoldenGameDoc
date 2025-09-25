@@ -48,12 +48,6 @@ Nếu số dư không đủ → báo lỗi.
 
 ## API Endpoints
 
-### Urls
-
-```
-https://golden-game-be-latest.onrender.com/api/v1
-```
-
 ### Base URL
 ```
 /swaps
@@ -69,11 +63,9 @@ Authorization: Bearer <jwt_token>
 
 ## Kiểm tra số dư của ví
 
-### `POST /swaps/check-wallet-balance`
-
 ## 1. Tạo Swap Order
 
-### `POST /swaps/make-order-swap`
+### `POST /swaps`
 
 Tạo swap order từ SOL/USDT sang MPB. Endpoint này tạo một swap order với trạng thái PENDING.
 
@@ -134,7 +126,7 @@ Tạo swap order từ SOL/USDT sang MPB. Endpoint này tạo một swap order v�
 
 ## 2. Lấy danh sách Swap theo trạng thái và coin
 
-### `GET /swaps/get-swaps-by-status-and-coin`
+### `GET /swaps`
 
 Lấy danh sách các giao dịch swap theo trạng thái và loại coin.
 
@@ -147,7 +139,7 @@ Lấy danh sách các giao dịch swap theo trạng thái và loại coin.
 
 #### Example Request
 ```
-GET /swaps/get-swaps-by-status-and-coin?status=pending&page=1&limit=10
+GET /swaps?status=pending&page=1&limit=10
 ```
 
 #### Response Success (200)
@@ -178,101 +170,6 @@ GET /swaps/get-swaps-by-status-and-coin?status=pending&page=1&limit=10
   }
 }
 ```
-
----
-
-## 3. Lấy thông tin Swap theo ID
-
-### `GET /swaps/get-swap-by-id`
-
-Lấy thông tin chi tiết của một swap order theo ID.
-
-#### Query Parameters
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `id` | number | Yes | ID của swap order |
-
-#### Example Request
-```
-GET /swaps/get-swap-by-id?id=123
-```
-
-#### Response Success (200)
-```json
-{
-  "message": "Swap found",
-  "data": {
-    "id": 123,
-    "user": {
-      "id": 1
-    },
-    "coin_send": {
-      "id": 1,
-      "symbol": "SOL",
-      "name": "Solana",
-      "mint": "So11111111111111111111111111111111111111112"
-    },
-    "coin_received": {
-      "id": 2,
-      "symbol": "MPB",
-      "name": "MPB Token",
-      "mint": "MPB_TOKEN_MINT_ADDRESS"
-    },
-    "rate": 150.25,
-    "rate_usd_send": 150.25,
-    "rate_usd_received": 1.0,
-    "amount_send": 1.5,
-    "amount_received": 225.375,
-    "status": "pending",
-    "message": null
-  }
-}
-```
-
-#### Response Error (400)
-```json
-{
-  "statusCode": 400,
-  "message": "Swap not found",
-  "error": "Bad Request"
-}
-```
-
----
-
-## 4. Xoá Swap theo ID
-
-### `DELETE /swaps/delete-swap-by-id`
-
-Xoá một swap order theo ID.
-
-#### Query Parameters
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `id` | number | Yes | ID của swap order |
-
-#### Example Request
-```
-DELETE /swaps/delete-swap-by-id?id=123
-```
-
-#### Response Success (200)
-```json
-{
-  "message": "Delete swap successfully"
-}
-```
-
-#### Response Error (400)
-```json
-{
-  "statusCode": 400,
-  "message": "Swap not found",
-  "error": "Bad Request"
-}
-```
-
----
 
 ## Data Models
 
