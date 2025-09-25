@@ -12,7 +12,7 @@ The Game Rooms API module provides functionality for managing game rooms and gam
 
 - URL
   ```http
-  https://8w7n4n91-8008.asse.devtunnels.ms/
+  https://8w7n4n91-8008.asse.devtunnels.ms/api/v1
   ```
 
 ## API Endpoints
