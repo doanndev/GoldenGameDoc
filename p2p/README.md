@@ -260,6 +260,112 @@ curl -X GET "http://localhost:3000/p2p/order-books?reverse_view=false"
 curl -X GET "http://localhost:3000/p2p/order-books?option=sell&coin_buy=USDT&price_min=0.1&price_max=0.2&status=executed&reverse_view=true&page=1&limit=10"
 ```
 
+---
+
+### 3. Tạo Giao dịch P2P
+
+**POST** `/p2p/transactions`
+
+Tạo giao dịch P2P từ một order book có sẵn.
+
+#### Headers
+```
+Authorization: Bearer <JWT_TOKEN>
+Content-Type: application/json
+```
+
+#### Request Body
+```json
+{
+  "amount": 100.0,
+  "order_book_id": 98,
+  "message": "Giao dịch nhanh"
+}
+```
+
+#### Parameters
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `amount` | number | Yes | Số lượng MPB muốn giao dịch (phải > 0) |
+| `order_book_id` | number | Yes | ID của order book muốn giao dịch |
+| `message` | string | No | Tin nhắn tùy chọn cho giao dịch |
+
+#### Response Success (201)
+```json
+{
+    "reference_code": "M54ZCIFV",
+    "user_buy_id": 142857,
+    "user_sell_id": 142859,
+    "coin_buy_id": 3,
+    "coin_sell_id": 2,
+    "order_book_id": 359,
+    "option": "buy",
+    "amount": 12,
+    "price_sol": "10",
+    "price_usd": "10",
+    "total_sol": 120,
+    "total_usd": 120,
+    "tx_hash": null,
+    "status": "pending",
+    "message": null,
+    "wallet_address": "7iVkjCipYtpLdEToJVVWwzTRz5aox12V3veEfKRXYACK",
+    "id": 63,
+    "created_at": "2025-09-25T06:42:44.796Z"
+}
+```
+
+#### Response Errors
+
+**400 Bad Request**
+- `Order book not found`
+- `Cannot create transaction with your own order book`
+- `Total price X is out of range. Must be between Y and Z`
+- `No amount available for transaction. Order book is empty or amount remaining is 0`
+- `Order book coin_sell is null - cannot determine payment coin`
+- `Order book coin_buy is null - cannot determine payment coin`
+- `User buy not found`
+- `User sell not found`
+- `Coin buy not found or inactive`
+- `Coin sell not found or inactive`
+
+**401 Unauthorized**
+- `Unauthorized`
+
+**422 Validation Error**
+- `amount must be a positive number`
+- `order_book_id must be a positive number`
+
+**500 Internal Server Error**
+- `Unable to generate unique reference code after multiple attempts`
+
+#### Ví dụ sử dụng
+
+**Mua MPB từ order book:**
+```bash
+curl -X POST http://localhost:3000/p2p/transactions \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "amount": 100,
+    "order_book_id": 98,
+    "message": "Mua MPB với giá tốt"
+  }'
+```
+
+**Bán MPB cho order book:**
+```bash
+curl -X POST http://localhost:3000/p2p/transactions \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "amount": 50,
+    "order_book_id": 99
+  }'
+```
+
+---
+
 ## 🔧 Tính năng chính
 
 ### Order Book Management
@@ -268,6 +374,14 @@ curl -X GET "http://localhost:3000/p2p/order-books?option=sell&coin_buy=USDT&pri
 - **Mã quảng cáo duy nhất**: Tự động tạo mã 8 ký tự không trùng lặp
 - **Blockchain integration**: Tự động tạo smart contract trên Solana
 - **Góc độ hiển thị**: Mặc định hiển thị từ góc độ người xem (reverse_view=true)
+
+### Transaction Management
+- **Tạo giao dịch**: User có thể tạo giao dịch từ order book có sẵn
+- **Tự động xác định vai trò**: Service tự động xác định user là buyer hay seller
+- **Validation nghiêm ngặt**: Kiểm tra price range, amount available, user permissions
+- **Mã tham chiếu duy nhất**: Tự động tạo mã 8 ký tự không trùng lặp
+- **Tính toán giá tự động**: Tự động tính price_sol, price_usd, total_sol, total_usd
+- **Bảo vệ khỏi self-trading**: Không cho phép user giao dịch với chính order book của mình
 
 ### Advanced Filtering
 - **Multi-field search**: Tìm kiếm trong adv_code, username, fullname
@@ -310,6 +424,7 @@ curl -X GET "http://localhost:3000/p2p/order-books?option=sell&coin_buy=USDT&pri
 
 - **POST /p2p/order-books**: Yêu cầu JWT token
 - **GET /p2p/order-books**: Không yêu cầu authentication
+- **POST /p2p/transactions**: Yêu cầu JWT token
 
 ## ⚡ Performance
 
@@ -332,3 +447,12 @@ curl -X GET "http://localhost:3000/p2p/order-books?option=sell&coin_buy=USDT&pri
 - **Not found errors**: 404 Not Found
 - **Server errors**: 500 Internal Server Error
 - **Consistent format**: Tất cả error đều có format nhất quán
+
+## 🎯 Use Cases
+
+1. **Người bán MPB**: Tạo order book với option "sell"
+2. **Người mua MPB**: Tìm order book với option "buy" 
+3. **Thực hiện giao dịch**: Tạo transaction từ order book có sẵn
+4. **Bảo mật giao dịch**: Hệ thống tự động validate và bảo vệ khỏi lỗi
+
+Module này tạo ra một hệ thống P2P trading hoàn chỉnh với tích hợp blockchain, cho phép người dùng giao dịch MPB một cách an toàn và minh bạch!
