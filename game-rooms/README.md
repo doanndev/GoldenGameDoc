@@ -28,32 +28,6 @@ The Game Rooms API module provides functionality for managing game rooms and gam
 | `symbol` | `varchar` | Ký hiệu coin (unique) |
 | `status` | `enum` | 'active' hoặc 'inactive' |
 
-#### 1. Create Game List
-```http
-POST /
-```
-
-**Description**: Create a new game list
-
-**Request Body**:
-```json
-{
-  "gl_name": "Slot Machine",
-  "gl_symbol": "SLOT"
-}
-```
-
-**Validation Rules**:
-- `name`: String, 3-20 characters, alphanumeric with dots and underscores only
-- `symbol`: String, required
-
-**Response**:
-```json
-{
-  "message": "Game list created successfully"
-}
-```
-
 #### 2. Get All Game Lists
 ```http
 GET /
