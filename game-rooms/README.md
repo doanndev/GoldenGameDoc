@@ -19,6 +19,8 @@ The Game Rooms API module provides functionality for managing game rooms and gam
 
 ### Game Lists(/game-lists)
 
+Endpoint: /game-lists
+
 ### Bảng `game_lists`
 
 | Trường | Kiểu | Mô tả |
@@ -72,6 +74,8 @@ GET /find-by-id?id=<:id>
 ```
 
 ### Game Rooms(/game-rooms)
+
+Endpoint: /game-rooms
 
 ### Bảng `game_rooms`
 
