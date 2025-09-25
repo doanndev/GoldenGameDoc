@@ -278,8 +278,7 @@ Content-Type: application/json
 ```json
 {
   "amount": 100.0,
-  "order_book_id": 98,
-  "message": "Giao dịch nhanh"
+  "order_book_id": 98
 }
 ```
 
@@ -289,12 +288,11 @@ Content-Type: application/json
 |-------|------|----------|-------------|
 | `amount` | number | Yes | Số lượng MPB muốn giao dịch (phải > 0) |
 | `order_book_id` | number | Yes | ID của order book muốn giao dịch |
-| `message` | string | No | Tin nhắn tùy chọn cho giao dịch |
 
 #### Response Success (201)
 ```json
 {
-    "reference_code": "M54ZCIFV",
+    "reference_code": "2HUSY4V2",
     "user_buy_id": 142857,
     "user_sell_id": 142859,
     "coin_buy_id": 3,
@@ -302,16 +300,15 @@ Content-Type: application/json
     "order_book_id": 359,
     "option": "buy",
     "amount": 12,
-    "price_sol": "10",
-    "price_usd": "10",
+    "price": "10",
     "total_sol": 120,
     "total_usd": 120,
-    "tx_hash": null,
-    "status": "pending",
+    "tx_hash": "4BDS9VmnRSu8bKqUNFUycvoHVyibGM5dwFfYCAmKvG1xbkrBAHpxz9DyNQcfiasM5esMfPo47vMEtmUnyvyWFnoA",
+    "status": "executed",
     "message": null,
     "wallet_address": "7iVkjCipYtpLdEToJVVWwzTRz5aox12V3veEfKRXYACK",
-    "id": 63,
-    "created_at": "2025-09-25T06:42:44.796Z"
+    "id": 80,
+    "created_at": "2025-09-25T09:41:40.398Z"
 }
 ```
 
@@ -338,6 +335,7 @@ Content-Type: application/json
 
 **500 Internal Server Error**
 - `Unable to generate unique reference code after multiple attempts`
+- `Internal server error occurred during transaction creation`
 
 #### Ví dụ sử dụng
 
@@ -348,8 +346,7 @@ curl -X POST http://localhost:3000/p2p/transactions \
   -H "Content-Type: application/json" \
   -d '{
     "amount": 100,
-    "order_book_id": 98,
-    "message": "Mua MPB với giá tốt"
+    "order_book_id": 98
   }'
 ```
 
@@ -362,6 +359,159 @@ curl -X POST http://localhost:3000/p2p/transactions \
     "amount": 50,
     "order_book_id": 99
   }'
+```
+
+---
+
+### 4. Lấy danh sách Giao dịch P2P
+
+**GET** `/p2p/transactions`
+
+Lấy danh sách giao dịch P2P mà user hiện tại đã tạo với khả năng filter, search và pagination.
+
+#### Headers
+```
+Authorization: Bearer <JWT_TOKEN>
+Content-Type: application/json
+```
+
+#### Query Parameters
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `user_buy_id` | number | No | - | Filter theo ID user mua |
+| `user_sell_id` | number | No | - | Filter theo ID user bán |
+| `coin_buy_id` | number | No | - | Filter theo ID coin mua |
+| `coin_sell_id` | number | No | - | Filter theo ID coin bán |
+| `order_book_id` | number | No | - | Filter theo ID order book |
+| `option` | string | No | - | Filter theo option: `"buy"` hoặc `"sell"` |
+| `status` | string | No | - | Filter theo status: `"pending"`, `"executed"`, `"failed"`, `"cancelled"` |
+| `search` | string | No | - | Tìm kiếm theo reference_code, username, fullname |
+| `date_from` | string | No | - | Filter từ ngày (ISO date string) |
+| `date_to` | string | No | - | Filter đến ngày (ISO date string) |
+| `page` | number | No | `1` | Trang hiện tại |
+| `limit` | number | No | `10` | Số item/trang (max: 100) |
+
+#### Response Success (200)
+```json
+{
+  "data": [
+    {
+      "id": 1,
+      "reference_code": "ABC12345",
+      "user_buy_id": 2,
+      "user_sell_id": 1,
+      "coin_buy_id": 1,
+      "coin_sell_id": 2,
+      "order_book_id": 98,
+      "option": "buy",
+      "amount": 100,
+      "price": 0.5,
+      "total_sol": 50,
+      "total_usd": 50,
+      "tx_hash": "0x1234567890abcdef...",
+      "status": "executed",
+      "message": "Transaction created successfully. Reference: ABC12345",
+      "wallet_address": "7iVkjCipYtpLdEToJVVWwzTRz5aox12V3veEfKRXYACK",
+      "created_at": "2024-01-01T00:00:00.000Z",
+      "user_buy": {
+        "id": 2,
+        "username": "user2",
+        "fullname": "User 2"
+      },
+      "user_sell": {
+        "id": 1,
+        "username": "user1",
+        "fullname": "User 1"
+      },
+      "coin_buy": {
+        "id": 1,
+        "name": "MPB",
+        "symbol": "MPB",
+        "logo": "https://..."
+      },
+      "coin_sell": {
+        "id": 2,
+        "name": "USDT",
+        "symbol": "USDT",
+        "logo": "https://..."
+      },
+      "order_book": {
+        "id": 98,
+        "adv_code": "ADV001",
+        "option": "sell",
+        "amount": 1000,
+        "price": 0.5
+      }
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 10,
+    "total": 25,
+    "totalPages": 3,
+    "hasNext": true,
+    "hasPrev": false
+  }
+}
+```
+
+#### Response Errors
+
+**400 Bad Request**
+- `date_from must not be greater than date_to`
+- `Internal server error occurred while fetching transactions`
+
+**401 Unauthorized**
+- `Unauthorized`
+
+**422 Validation Error**
+- `page must not be less than 1`
+- `limit must not be less than 1`
+- `limit must not be greater than 100`
+
+#### Ví dụ sử dụng
+
+**Lấy tất cả giao dịch:**
+```bash
+curl -X GET "http://localhost:3000/p2p/transactions" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+**Filter theo status:**
+```bash
+curl -X GET "http://localhost:3000/p2p/transactions?status=executed" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+**Filter theo option:**
+```bash
+curl -X GET "http://localhost:3000/p2p/transactions?option=buy" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+**Tìm kiếm theo reference code:**
+```bash
+curl -X GET "http://localhost:3000/p2p/transactions?search=ABC12345" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+**Filter theo khoảng thời gian:**
+```bash
+curl -X GET "http://localhost:3000/p2p/transactions?date_from=2024-01-01&date_to=2024-01-31" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+**Pagination:**
+```bash
+curl -X GET "http://localhost:3000/p2p/transactions?page=2&limit=20" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+**Kết hợp nhiều filter:**
+```bash
+curl -X GET "http://localhost:3000/p2p/transactions?option=buy&status=executed&coin_buy_id=1&page=1&limit=10" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
 ```
 
 ---
@@ -380,16 +530,22 @@ curl -X POST http://localhost:3000/p2p/transactions \
 - **Tự động xác định vai trò**: Service tự động xác định user là buyer hay seller
 - **Validation nghiêm ngặt**: Kiểm tra price range, amount available, user permissions
 - **Mã tham chiếu duy nhất**: Tự động tạo mã 8 ký tự không trùng lặp
-- **Tính toán giá tự động**: Tự động tính price_sol, price_usd, total_sol, total_usd
+- **Tính toán giá tự động**: Tự động tính total_sol, total_usd từ price và amount
 - **Bảo vệ khỏi self-trading**: Không cho phép user giao dịch với chính order book của mình
+- **Blockchain integration**: Tự động lock coin trên smart contract
+- **Xem lịch sử giao dịch**: User có thể xem tất cả giao dịch đã tạo với filter đa dạng
+- **Real-time status**: Cập nhật trạng thái giao dịch real-time
 
 ### Advanced Filtering
-- **Multi-field search**: Tìm kiếm trong adv_code, username, fullname
-- **Price range**: Filter theo khoảng giá
-- **Status filtering**: Lọc theo trạng thái giao dịch
-- **Coin filtering**: Filter theo coin chính và coin đối tác
-- **Payment coin filtering**: Filter theo coin thanh toán (USDT/SOL)
-- **View perspective**: Hiển thị option từ góc độ người xem hoặc người tạo
+- **Multi-field search**: Tìm kiếm trong adv_code, username, fullname (order books) và reference_code, username, fullname (transactions)
+- **Price range**: Filter theo khoảng giá (order books)
+- **Status filtering**: Lọc theo trạng thái giao dịch (order books và transactions)
+- **Coin filtering**: Filter theo coin chính và coin đối tác (order books và transactions)
+- **Payment coin filtering**: Filter theo coin thanh toán (USDT/SOL) (order books)
+- **View perspective**: Hiển thị option từ góc độ người xem hoặc người tạo (order books)
+- **Date range filtering**: Filter theo khoảng thời gian (transactions)
+- **User filtering**: Filter theo user mua/bán (transactions)
+- **Option filtering**: Filter theo buy/sell option (transactions)
 
 ### Pagination
 - **Flexible pagination**: Hỗ trợ page/limit
@@ -420,11 +576,34 @@ curl -X POST http://localhost:3000/p2p/transactions \
 | `tx_hash` | `varchar` | Hash giao dịch blockchain |
 | `created_at` | `timestamptz` | Thời gian tạo |
 
+### Bảng `transactions`
+
+| Trường | Kiểu | Mô tả |
+|--------|------|-------|
+| `id` | `integer` | Primary key |
+| `reference_code` | `varchar(8)` | Mã tham chiếu duy nhất |
+| `user_buy_id` | `integer` | ID user mua |
+| `user_sell_id` | `integer` | ID user bán |
+| `coin_buy_id` | `integer` | ID coin mua |
+| `coin_sell_id` | `integer` | ID coin bán |
+| `order_book_id` | `integer` | ID order book liên quan |
+| `option` | `enum` | 'buy' hoặc 'sell' (từ góc độ user tạo transaction) |
+| `amount` | `decimal` | Số lượng giao dịch |
+| `price` | `decimal` | Giá mỗi đơn vị |
+| `total_sol` | `decimal` | Tổng giá trị SOL |
+| `total_usd` | `decimal` | Tổng giá trị USD |
+| `tx_hash` | `varchar` | Hash giao dịch blockchain |
+| `status` | `enum` | 'pending', 'executed', 'failed', 'cancelled' |
+| `message` | `text` | Thông báo trạng thái |
+| `wallet_address` | `varchar` | Địa chỉ ví user tạo transaction |
+| `created_at` | `timestamptz` | Thời gian tạo |
+
 ## 🔒 Authentication
 
 - **POST /p2p/order-books**: Yêu cầu JWT token
 - **GET /p2p/order-books**: Không yêu cầu authentication
 - **POST /p2p/transactions**: Yêu cầu JWT token
+- **GET /p2p/transactions**: Yêu cầu JWT token
 
 ## ⚡ Performance
 
@@ -453,6 +632,10 @@ curl -X POST http://localhost:3000/p2p/transactions \
 1. **Người bán MPB**: Tạo order book với option "sell"
 2. **Người mua MPB**: Tìm order book với option "buy" 
 3. **Thực hiện giao dịch**: Tạo transaction từ order book có sẵn
-4. **Bảo mật giao dịch**: Hệ thống tự động validate và bảo vệ khỏi lỗi
+4. **Xem lịch sử giao dịch**: User có thể xem tất cả giao dịch đã thực hiện
+5. **Theo dõi trạng thái**: Kiểm tra trạng thái giao dịch (pending, executed, failed, cancelled)
+6. **Tìm kiếm giao dịch**: Tìm kiếm giao dịch theo reference code, user, coin
+7. **Filter theo thời gian**: Xem giao dịch trong khoảng thời gian cụ thể
+8. **Bảo mật giao dịch**: Hệ thống tự động validate và bảo vệ khỏi lỗi
 
 Module này tạo ra một hệ thống P2P trading hoàn chỉnh với tích hợp blockchain, cho phép người dùng giao dịch MPB một cách an toàn và minh bạch!
