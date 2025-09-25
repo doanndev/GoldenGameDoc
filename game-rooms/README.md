@@ -10,6 +10,11 @@ The Game Rooms API module provides functionality for managing game rooms and gam
 - **User Authentication**: JWT-based authentication for protected endpoints
 - **Master User Validation**: Only master users can manage game rooms
 
+- URL
+  ```http
+  url https://8w7n4n91-8008.asse.devtunnels.ms/
+  ```
+
 ## API Endpoints
 
 ### Game Lists(/game-lists)
@@ -201,6 +206,7 @@ GET /
 - `limit` (number, optional): Items per page (default: 10)
 - `room_id` (number, optional): Filter by game room id
 - `host_id` (number, optional): Filter by game room owner id
+- `host`  (string, optional): Filter by gmae room host
 
 **Response**:
 ```json
