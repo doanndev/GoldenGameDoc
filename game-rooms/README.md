@@ -115,6 +115,7 @@ POST /
 ```json
 {
   "game_room": {
+    "name": "Phòng game 004",
     "participation_amount": 10.50,
     "prizes_num": 3
   },
