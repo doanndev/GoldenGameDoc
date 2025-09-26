@@ -83,9 +83,15 @@ Content-Type: application/json
 
 **400 Bad Request**
 - `price_min cannot be greater than price_max`
+- `Amount must be greater than 0`
+- `Price must be greater than 0`
+- `Price min must be greater than 0`
+- `Price max must be greater than 0`
+- `Invalid wallet address format`
 - `MPB coin not found or inactive`
 - `Coin with symbol 'SYMBOL' not found or inactive`
 - `Wallet address not found or not owned by user`
+- `Import wallet not found or not owned by user`
 
 **401 Unauthorized**
 - `Unauthorized`
@@ -94,9 +100,13 @@ Content-Type: application/json
 - `option must be one of the following values: buy, sell`
 - `coin_symbol only supports USDT or SOL`
 - `amount must be a positive number`
+- `price must be a positive number`
+- `price_min must be a positive number`
+- `price_max must be a positive number`
 
 **500 Internal Server Error**
 - `Unable to generate unique advertisement code after multiple attempts`
+- `Internal server error occurred during order book creation error: [error_message]`
 
 #### Ví dụ sử dụng
 
@@ -260,6 +270,17 @@ curl -X GET "http://localhost:3000/p2p/order-books?reverse_view=false"
 curl -X GET "http://localhost:3000/p2p/order-books?option=sell&coin_buy=USDT&price_min=0.1&price_max=0.2&status=executed&reverse_view=true&page=1&limit=10"
 ```
 
+#### Response Errors
+
+**400 Bad Request**
+- `price_min cannot be greater than price_max`
+- `Failed to get order books: [error_message]`
+
+**422 Validation Error**
+- `page must not be less than 1`
+- `limit must not be less than 1`
+- `limit must not be greater than 100`
+
 ---
 
 ### 3. Tạo Giao dịch P2P
@@ -325,6 +346,10 @@ Content-Type: application/json
 - `User sell not found`
 - `Coin buy not found or inactive`
 - `Coin sell not found or inactive`
+- `Insufficient amount remaining in order book`
+- `Order book creator wallet address not found`
+- `Insufficient balance. Wallet [address] needs [amount] [coin] to complete this transaction`
+- `Direct transfer failed: [error_message]`
 
 **401 Unauthorized**
 - `Unauthorized`
@@ -335,7 +360,7 @@ Content-Type: application/json
 
 **500 Internal Server Error**
 - `Unable to generate unique reference code after multiple attempts`
-- `Internal server error occurred during transaction creation`
+- `Internal server error occurred during transaction creation: [error_message]`
 
 #### Ví dụ sử dụng
 
@@ -460,7 +485,7 @@ Content-Type: application/json
 
 **400 Bad Request**
 - `date_from must not be greater than date_to`
-- `Internal server error occurred while fetching transactions`
+- `Internal server error occurred while fetching transactions: [error_message]`
 
 **401 Unauthorized**
 - `Unauthorized`
@@ -622,10 +647,206 @@ curl -X GET "http://localhost:3000/p2p/transactions?option=buy&status=executed&c
 
 ## 📝 Error Handling
 
-- **Validation errors**: 400 Bad Request với message chi tiết
-- **Not found errors**: 404 Not Found
-- **Server errors**: 500 Internal Server Error
-- **Consistent format**: Tất cả error đều có format nhất quán
+### Error Types & Status Codes
+
+**400 Bad Request** - Client errors:
+- Validation errors: `price_min cannot be greater than price_max`
+- Business logic errors: `Cannot create transaction with your own order book`
+- Resource not found: `Order book not found`, `User buy not found`
+- Insufficient resources: `No amount available for transaction`
+- Wallet errors: `Wallet address not found or not owned by user`
+- Balance errors: `Insufficient balance. Wallet [address] needs [amount] [coin]`
+- Blockchain errors: `Direct transfer failed: [error_message]`
+- Wallet errors: `Wallet not found or private key not available`
+- Keypair errors: `Invalid private key format`
+
+**401 Unauthorized** - Authentication errors:
+- `Unauthorized` - JWT token không hợp lệ hoặc thiếu
+
+**422 Validation Error** - Input validation errors:
+- Required field errors: `amount must be a positive number`
+- Enum validation: `option must be one of the following values: buy, sell`
+- Range validation: `limit must not be greater than 100`
+- Format validation: `coin_symbol only supports USDT or SOL`
+
+**500 Internal Server Error** - Server errors:
+- System errors: `Unable to generate unique reference code after multiple attempts`
+- Database errors: `Internal server error occurred during transaction creation: [error_message]`
+- Blockchain integration errors: `Internal server error occurred during order book creation error: [error_message]`
+
+### Error Message Format
+
+Tất cả error messages đều có format nhất quán:
+- **Validation errors**: Mô tả rõ ràng field nào và rule nào bị vi phạm
+- **Business logic errors**: Giải thích tại sao action không thể thực hiện
+- **System errors**: Bao gồm error message gốc trong `[error_message]`
+- **Dynamic values**: Sử dụng placeholder như `[address]`, `[amount]`, `[coin]` cho các giá trị động
+
+### Common Error Scenarios
+
+#### 1. **Order Book Creation Errors**
+```json
+// Invalid price range
+{
+  "statusCode": 400,
+  "message": "price_min cannot be greater than price_max"
+}
+
+// Invalid coin symbol
+{
+  "statusCode": 422,
+  "message": "coin_symbol only supports USDT or SOL"
+}
+
+// Wallet not found
+{
+  "statusCode": 400,
+  "message": "Wallet address not found or not owned by user"
+}
+```
+
+#### 2. **Transaction Creation Errors**
+```json
+// Self-trading attempt
+{
+  "statusCode": 400,
+  "message": "Cannot create transaction with your own order book"
+}
+
+// Insufficient balance
+{
+  "statusCode": 400,
+  "message": "Insufficient balance. Wallet 7iVkjCipYtpLdEToJVVWwzTRz5aox12V3veEfKRXYACK needs 120 USDT to complete this transaction"
+}
+
+// Price out of range
+{
+  "statusCode": 400,
+  "message": "Total price 150 is out of range. Must be between 100 and 200"
+}
+```
+
+#### 3. **Validation Errors**
+```json
+// Missing required field
+{
+  "statusCode": 422,
+  "message": ["amount must be a positive number"]
+}
+
+// Invalid enum value
+{
+  "statusCode": 422,
+  "message": ["option must be one of the following values: buy, sell"]
+}
+```
+
+#### 4. **Blockchain Service Errors**
+```json
+// Wallet not found
+{
+  "statusCode": 400,
+  "message": "Wallet not found or private key not available"
+}
+
+// Invalid private key
+{
+  "statusCode": 400,
+  "message": "Invalid private key format"
+}
+
+// Smart contract error
+{
+  "statusCode": 400,
+  "message": "Create P2P Order (token) failed: [Solana error details]"
+}
+
+// Direct transfer error
+{
+  "statusCode": 400,
+  "message": "Direct transfer failed: Transaction simulation failed"
+}
+```
+
+### Error Troubleshooting
+
+#### **Wallet Issues**
+- **Problem**: `Wallet address not found or not owned by user`
+- **Solution**: Kiểm tra wallet address có đúng format Solana không (44 ký tự base58)
+- **Check**: Đảm bảo wallet đã được import hoặc tạo trong hệ thống
+
+#### **Balance Issues**
+- **Problem**: `Insufficient balance. Wallet [address] needs [amount] [coin]`
+- **Solution**: Kiểm tra số dư thực tế trong ví trước khi tạo transaction
+- **Check**: Sử dụng API check balance hoặc kiểm tra trên Solana Explorer
+
+#### **Price Range Issues**
+- **Problem**: `Total price X is out of range. Must be between Y and Z`
+- **Solution**: Điều chỉnh amount hoặc tìm order book khác có price range phù hợp
+- **Check**: Tính toán: `total_price = amount * price` phải nằm trong `[price_min, price_max]`
+
+#### **Self-Trading Prevention**
+- **Problem**: `Cannot create transaction with your own order book`
+- **Solution**: Chỉ có thể tạo transaction với order book của user khác
+- **Check**: Đảm bảo `order_book.user_id !== current_user.id`
+
+#### **Blockchain Errors**
+- **Problem**: `Direct transfer failed: [error_message]`
+- **Solution**: Kiểm tra network connection, gas fee, và smart contract status
+- **Check**: Xem logs chi tiết trong blockchain service
+
+- **Problem**: `Wallet not found or private key not available`
+- **Solution**: Đảm bảo wallet đã được import với private key hợp lệ
+- **Check**: Kiểm tra wallet trong database và private key format
+
+- **Problem**: `Invalid private key format`
+- **Solution**: Kiểm tra private key có đúng format base58 không
+- **Check**: Private key phải là 64 bytes được encode base58
+
+#### **Smart Contract Errors**
+- **Problem**: `Create P2P Order failed: [error_message]`
+- **Solution**: Kiểm tra smart contract configuration và program ID
+- **Check**: Xem logs trong blockchain service và Solana Explorer
+
+- **Problem**: `Match P2P Order failed: [error_message]`
+- **Solution**: Kiểm tra vault accounts và token accounts
+- **Check**: Đảm bảo tất cả required accounts đã được tạo
+
+### Blockchain Configuration
+
+#### **Required Environment Variables**
+```bash
+# Solana RPC URL
+SOLANA_RPC_URL=https://api.devnet.solana.com
+
+# Golden Game Program ID
+GOLDEN_GAME_PROGRAM_ID=your_program_id_here
+
+# Authority Private Key (base58 encoded)
+AUTHORITY_PRIVATE_KEY=your_private_key_here
+
+# P2P Fee Percentage (optional, default: 0.02 = 2%)
+P2P_FEE_PERCENTAGE=0.02
+```
+
+#### **Token Mint Addresses**
+```typescript
+// MPB Token
+TOKEN_MINT = '9wcpBxUDTi2K7cXoHsmP7K4S7ZSZpjedQrR3gh1evVNQ'
+
+// USDT Token  
+USDT_MINT = 'Gr5D54dHC8neoFBQQuy8ni6S19E5ygg7Ewr3i1x6RRP5'
+```
+
+#### **Smart Contract Accounts**
+- `config` - Program configuration
+- `authority` - Program authority
+- `tokenVault` - MPB token vault
+- `usdtVault` - USDT token vault
+- `solVault` - SOL vault
+- `tokenFeeVault` - MPB fee vault
+- `usdtFeeVault` - USDT fee vault
+- `solFeeVault` - SOL fee vault
 
 ## 🎯 Use Cases
 
