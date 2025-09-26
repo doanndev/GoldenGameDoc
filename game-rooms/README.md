@@ -315,6 +315,10 @@ PATCH /?id=<:id>
 }
 ```
 
+```http
+  https://8w7n4n91-8008.asse.devtunnels.ms/api/v1
+```
+
 ## API Endpoints
 
 ### 1. Join Game Room
