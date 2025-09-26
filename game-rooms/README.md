@@ -315,6 +315,123 @@ PATCH /?id=<:id>
 }
 ```
 
+## API Endpoints
+
+### 1. Join Game Room
+**POST** `/game-join-rooms`
+
+Tham gia vào một phòng game với session cụ thể.
+
+#### Request Body
+```json
+{
+    "session_id": 20,
+    "room_id": 34,
+    "amount": 25.5,
+    "wallet_address": "EttPfSsK9GoszoUcfsLnnbnQHMy14H2PrsX1JctXPHxT",
+    "tx_hash": "1234"
+}
+```
+
+#### Request Body Schema
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `session_id` | number | Yes | ID của session game |
+| `room_id` | number | Yes | ID của phòng game |
+| `wallet_address` | string | Yes | Địa chỉ ví của user |
+| `hash` | string | Yes | Hash giao dịch |
+| `amount` | number | Yes | Số tiền tham gia |
+
+#### Success Response (201)
+```json
+{
+  "message": "Join room successfully"
+}
+```
+
+#### Error Responses
+| Status Code | Message | Description |
+|-------------|---------|-------------|
+| 400 | Invalid parameters | Thiếu tham số bắt buộc |
+| 400 | Game room not found | Không tìm thấy phòng game |
+| 400 | Game session not found | Không tìm thấy session |
+| 400 | Wallet not connected | Ví chưa được kết nối |
+| 400 | Insufficient balance | Số dư không đủ |
+| 400 | You have already joined this room | Đã tham gia phòng này rồi |
+| 400 | Session has already started for more than 3 minutes. You cannot join now. | Session đã hết hạn |
+| 400 | Session has not started yet. Please wait for the session to begin. | Session chưa bắt đầu |
+| 400 | Session has reached the maximum number of participants. | Đã đủ số người tham gia |
+| 401 | Unauthorized | Token không hợp lệ |
+
+---
+
+### 2. Get Game Join Rooms
+**GET** `/game-join-rooms`
+
+Lấy danh sách các lần tham gia phòng game.
+
+#### Query Parameters
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `session_id` | number | No | - | Lọc theo session ID |
+| `room_id` | number | No | - | Lọc theo room ID |
+| `page` | number | No | 1 | Số trang |
+| `limit` | number | No | 10 | Số lượng items per page |
+
+#### Example Request
+```
+GET /game-join-rooms?session_id=1&room_id=13&page=1&limit=10
+```
+
+#### Success Response (200)
+```json
+{
+  "message": "Game join room fetched successfully",
+  "data": [
+    {
+      "id": 1,
+      "wallet_address": "0x1234567890abcdef...",
+      "amount": 100,
+      "time_join": "2024-01-01T00:00:00.000Z",
+      "status": "view",
+      "session": {
+        "id": 1,
+        "session": "1234567890",
+        "time_start": "2024-01-01T00:03:00.000Z",
+        "status": "wait"
+      },
+      "room": {
+        "id": 13,
+        "name": "Phòng game 003",
+        "participation_amount": 10,
+        "prizes_num": 3
+      },
+      "user": {
+        "id": 1,
+        "username": "user123"
+      }
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 10,
+    "total": 1,
+    "totalPages": 1,
+    "hasNext": false,
+    "hasPrev": false
+  }
+}
+```
+
+#### Error Responses
+| Status Code | Message | Description |
+|-------------|---------|-------------|
+| 401 | Unauthorized | Token không hợp lệ |
+| 500 | Error fetching game join rooms | Lỗi server |
+
+---
+
+
 **Validation Rules**:
 - Same validation as create game room
 - **Prize Replacement**: If `game_set_prizes` is provided, ALL existing prizes will be deleted and replaced with new ones
