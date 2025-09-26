@@ -86,7 +86,7 @@ Gửi mã xác thực đến email của người dùng để đăng ký tài kh
 
 ---
 
-### 3. Đăng nhập với Username
+### 3. Đăng nhập với Username và Email
 **POST** `/auth/login`
 
 Xác thực người dùng với username và mật khẩu.
@@ -94,7 +94,7 @@ Xác thực người dùng với username và mật khẩu.
 **Request Body:**
 ```json
 {
-  "username": "johndoe",
+  "username": "johndoe", // hoặc johndoe@gmail.com
   "password": "SecurePass123"
 }
 ```
@@ -112,7 +112,7 @@ Xác thực người dùng với username và mật khẩu.
 
 **Status Codes:**
 - `200` - Login successful
-- `401` - "Invalid username or password" / "Username not verified. Please verify your username first." / "Account is not active. Please contact support." / "Password not set. Please reset your password." / "Invalid username or password"
+- `401` - "Invalid username/email or password" / "Username not verified. Please verify your username first." / "Account is not active. Please contact support." / "Password not set. Please reset your password." / "Invalid username or password"
 
 ---
 
