@@ -60,9 +60,9 @@ const socket = io('ws://localhost:8000/lottery', {
 
 | Event | Payload | Mô tả |
 |-------|---------|-------|
-| `startSession` | `{ sessionId: number }` | Bắt đầu session - tạo vé số |
+| `startSession` | `{ sessionId: number }` | Bắt đầu session - tạo vé số và countdown 30s |
 | `getSelectedNumbers` | `{ sessionId: number }` | Lấy số đã chọn (không cần thiết - server tự động broadcast) |
-| `generateResults` | `{ sessionId: number, roomId: number }` | Generate kết quả |
+| `generateResults` | `{ sessionId: number, roomId: number }` | Generate kết quả (không cần thiết - server tự động generate) |
 
 ### Server → Client Events
 
@@ -103,7 +103,7 @@ interface UseLotteryGameReturn {
   selectNumber: (joinId: number, ticketNumber: number) => Promise<void>;
   startSession: (sessionId: number) => void;
   // getSelectedNumbers: (sessionId: number) => void; // Không cần thiết - server tự động broadcast
-  generateResults: (sessionId: number, roomId: number) => void;
+  // generateResults: (sessionId: number, roomId: number) => void; // Không cần thiết - server tự động generate
   connect: () => void;
   disconnect: () => void;
 }
@@ -251,7 +251,7 @@ export const useLotteryGame = (serverUrl: string = 'ws://localhost:8000'): UseLo
     selectNumber,
     startSession,
     // getSelectedNumbers, // Không cần thiết - server tự động broadcast
-    generateResults,
+    // generateResults, // Không cần thiết - server tự động generate
     connect,
     disconnect
   };
@@ -270,7 +270,7 @@ const LotteryGameComponent: React.FC = () => {
     selectNumber,
     startSession,
     // getSelectedNumbers, // Không cần thiết - server tự động broadcast
-    generateResults,
+    // generateResults, // Không cần thiết - server tự động generate
     connect,
     disconnect
   } = useLotteryGame('ws://localhost:8000');
@@ -305,8 +305,30 @@ const LotteryGameComponent: React.FC = () => {
         </button>
       </div>
 
+      {/* Countdown Timer */}
+      {state.countdown.isActive && (
+        <div style={{ 
+          background: '#fff3cd', 
+          border: '2px solid #ffeaa7', 
+          borderRadius: '8px', 
+          padding: '15px', 
+          margin: '15px 0',
+          textAlign: 'center'
+        }}>
+          <h3>⏰ Countdown Timer</h3>
+          <div style={{ 
+            fontSize: '2em', 
+            fontWeight: 'bold', 
+            color: state.countdown.timeLeft <= 5 ? '#e74c3c' : state.countdown.timeLeft <= 10 ? '#f39c12' : '#2c3e50',
+            margin: '10px 0'
+          }}>
+            {state.countdown.timeLeft}s
+          </div>
+          <p>Trạng thái: {state.countdown.isActive ? 'Đang chọn số...' : 'Hết thời gian'}</p>
+        </div>
+      )}
+
       <div>
-        <h3>Countdown: {state.countdown.timeLeft}s</h3>
         <h3>Số đã chọn: {state.totalSelected}</h3>
         {state.autoSelectedCount > 0 && (
           <p>Đã tự động chọn số cho {state.autoSelectedCount} người chơi</p>
@@ -320,6 +342,38 @@ const LotteryGameComponent: React.FC = () => {
         </ul>
       </div>
 
+      {/* Game Results */}
+      {state.gameResults.length > 0 && (
+        <div style={{ 
+          background: '#f8f9fa', 
+          border: '2px solid #e9ecef', 
+          borderRadius: '8px', 
+          padding: '20px', 
+          margin: '20px 0'
+        }}>
+          <h3>🏆 Kết Quả Game</h3>
+          <div>
+            <h4>Số trúng thưởng:</h4>
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+              {state.winningNumbers.map((number, index) => (
+                <div key={index} style={{
+                  background: 'linear-gradient(45deg, #f39c12, #e67e22)',
+                  color: 'white',
+                  padding: '10px 15px',
+                  borderRadius: '50%',
+                  fontWeight: 'bold',
+                  fontSize: '18px',
+                  minWidth: '50px',
+                  textAlign: 'center'
+                }}>
+                  {number}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {state.error && (
         <div style={{ color: 'red' }}>
           Lỗi: {state.error}
@@ -331,6 +385,7 @@ const LotteryGameComponent: React.FC = () => {
 
 export default LotteryGameComponent;
 ```
+
 
 ## 🔄 Flow hoạt động chi tiết
 
