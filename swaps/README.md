@@ -63,6 +63,14 @@ Authorization: Bearer <jwt_token>
 
 ## Kiểm tra số dư của ví
 
+## Lấy giá của Sol quy đổi sang usd
+
+### `GET /swaps/sol-price`
+
+```
+202.92
+```
+
 ## 1. Tạo Swap Order
 
 ### `POST /swaps`
