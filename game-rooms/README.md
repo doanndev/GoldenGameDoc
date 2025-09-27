@@ -89,10 +89,9 @@ Endpoint: /game-rooms
 | `participation_amount` | `decimal` | Số tiền tham gia |
 | `total_amount` | `decimal` | Tổng số tiền tham gia của người chơi |
 | `prizes_num` | `integer` | Số lượng giải thưởng |
-| `status` | `enum` | Trạng thái phòng: 'wait', 'run', 'inactive', 'delete' (mặc định: 'wait') |
+| `status` | `enum` | Trạng thái phòng: 'run', 'inactive', 'delete' (mặc định: 'run') |
 
 #### Enum GameRoomStatus
-- `WAIT` = 'wait' - Phòng đang chờ
 - `RUN` = 'run' - Phòng đang chạy  
 - `INACTIVE` = 'inactive' - Phòng không hoạt động
 - `DELETE` = 'delete' - Phòng đã bị xóa
