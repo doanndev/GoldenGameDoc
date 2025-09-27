@@ -191,38 +191,132 @@ GET /
 **Response**:
 ```json
 {
-  "message": "Game rooms fetched successfully",
-  "data": [
-    {
-      "id": 1,
-      "name": "GOLDEN_SLOT_001",
-      "symbol": "GOLD",
-      "participation_amount": 10.50,
-      "prizes_num": 3,
-      "game_set_prizes": [
+    "message": "Game rooms fetched successfully",
+    "data": [
         {
-          "rank": 1,
-          "percent": 50.00
+            "id": 52,
+            "name": "Phòng game 111222333444555666777888999222555",
+            "symbol": "https://m.media-amazon.com/images/I/71GNE098B4L.jpg",
+            "participation_amount": 10,
+            "prizes_num": 1,
+            "total_amount": 153,
+            "game_type_id": {
+                "id": 1,
+                "name": "Xổ số BLOCKCHAIN",
+                "symbol": "symbol",
+                "status": "active"
+            },
+            "owner_id": {
+                "id": 142859,
+                "username": "tranthe"
+            },
+            "status": "run",
+            "current_session": {
+                "id": 38,
+                "status": "running",
+                "time_start": "2025-09-27T05:09:44.181Z",
+                "session": "1758949604181"
+            },
+            "game_set_prizes": [
+                {
+                    "rank": 1,
+                    "percent": 100
+                }
+            ],
+            "join_room_num": 8,
+            "joiners": [
+                {
+                    "username": "thanhnhan",
+                    "amount": 25.5,
+                    "time_join": "2025-09-27T05:07:29.688Z"
+                },
+                {
+                    "username": "Dautay",
+                    "amount": 25.5,
+                    "time_join": "2025-09-27T05:07:29.688Z"
+                },
+                {
+                    "username": "Dautay",
+                    "amount": 25.5,
+                    "time_join": "2025-09-27T06:45:25.371Z"
+                },
+                {
+                    "username": "tranthe",
+                    "amount": 25.5,
+                    "time_join": "2025-09-27T06:44:59.400Z"
+                },
+                {
+                    "username": "Dautay",
+                    "amount": 25.5,
+                    "time_join": "2025-09-27T06:28:07.265Z"
+                },
+                {
+                    "username": "tranthe",
+                    "amount": 25.5,
+                    "time_join": "2025-09-27T06:27:38.241Z"
+                },
+                {
+                    "username": "Dautay",
+                    "amount": 25.5,
+                    "time_join": "2025-09-27T05:07:29.688Z"
+                },
+                {
+                    "username": "tranthe",
+                    "amount": 25.5,
+                    "time_join": "2025-09-27T05:06:59.835Z"
+                }
+            ]
         },
         {
-          "rank": 2,
-          "percent": 30.00
-        },
-        {
-          "rank": 3,
-          "percent": 20.00
+            "id": 45,
+            "name": "Phòng game 111222333444",
+            "symbol": "https://m.media-amazon.com/images/I/71GNE098B4L.jpg",
+            "participation_amount": 10,
+            "prizes_num": 3,
+            "total_amount": 102,
+            "game_type_id": {
+                "id": 1,
+                "name": "Xổ số BLOCKCHAIN",
+                "symbol": "symbol",
+                "status": "active"
+            },
+            "owner_id": {
+                "id": 142859,
+                "username": "tranthe"
+            },
+            "status": "wait",
+            "current_session": {
+                "id": 31,
+                "status": "running",
+                "time_start": "2025-09-27T03:07:26.676Z",
+                "session": "1758942266676"
+            },
+            "game_set_prizes": [
+                {
+                    "rank": 1,
+                    "percent": 50
+                },
+                {
+                    "rank": 2,
+                    "percent": 30
+                },
+                {
+                    "rank": 3,
+                    "percent": 20
+                }
+            ],
+            "join_room_num": 0,
+            "joiners": []
         }
-      ]
+    ],
+    "pagination": {
+        "page": 1,
+        "limit": 2,
+        "total": 52,
+        "totalPages": 26,
+        "hasNext": true,
+        "hasPrev": false
     }
-  ],
-  "pagination": {
-    "page": 1,
-    "limit": 10,
-    "total": 25,
-    "totalPages": 3,
-    "hasNext": true,
-    "hasPrev": false
-  }
 }
 ```
 
@@ -241,30 +335,52 @@ GET /find-by-id?id=<:id>
 **Response**:
 ```json
 {
-  "message": "Game room fetched successfully",
-  "data": [
-    {
-      "id": 1,
-      "name": "GOLDEN_SLOT_001",
-      "symbol": "GOLD",
-      "participation_amount": 10.50,
-      "prizes_num": 3,
-      "game_set_prizes": [
+    "message": "Game room fetched successfully",
+    "data": [
         {
-          "rank": 1,
-          "percent": 50.00
-        },
-        {
-          "rank": 2,
-          "percent": 30.00
-        },
-        {
-          "rank": 3,
-          "percent": 20.00
+            "id": 59,
+            "name": "Phòng game 59",
+            "symbol": "SYMBOL 1111",
+            "participation_amount": 30,
+            "prizes_num": 5,
+            "total_amount": 0,
+            "status": "run",
+            "game_type_id": {
+                "id": 1,
+                "name": "Xổ số BLOCKCHAIN",
+                "symbol": "symbol",
+                "status": "active"
+            },
+            "owner_id": {
+                "id": 142859,
+                "username": "tranthe"
+            },
+            "game_set_prizes": [
+                {
+                    "rank": 1,
+                    "percent": 40
+                },
+                {
+                    "rank": 2,
+                    "percent": 30
+                },
+                {
+                    "rank": 3,
+                    "percent": 20
+                },
+                {
+                    "rank": 4,
+                    "percent": 6
+                },
+                {
+                    "rank": 5,
+                    "percent": 4
+                }
+            ],
+            "join_room_num": 0,
+            "joiners": []
         }
-      ]
-    }
-  ]
+    ]
 }
 ```
 
@@ -292,31 +408,10 @@ PATCH /?id=<:id>
 **Request Body**:
 ```json
 {
-  "game_room": {
-    "name": "Updated Game Room",
-    "symbol": "UPD",
-    "participation_amount": 15.00,
-    "prizes_num": 3
-  },
-  "game_set_prizes": [
-    {
-      "rank": 1,
-      "percent": 50.00
-    },
-    {
-      "rank": 2,
-      "percent": 30.00
-    },
-    {
-      "rank": 3,
-      "percent": 20.00
-    }
-  ]
+    "name_new": "Phòng game 59",
+    "symbol": "SYMBOL 1111",
+    "participation_amount_new": 30
 }
-```
-
-```http
-  https://8w7n4n91-8008.asse.devtunnels.ms/api/v1
 ```
 
 #### 5. Delete Game Room
@@ -338,6 +433,10 @@ DELETE /?id=<:id>
 }
 ```
 
+```http
+  https://8w7n4n91-8008.asse.devtunnels.ms/api/v1
+```
+
 ## API Endpoints
 
 ### 1. Join Game Room
@@ -348,8 +447,8 @@ Tham gia vào một phòng game với session cụ thể.
 #### Request Body
 ```json
 {
-    "session_id": 20,
-    "room_id": 34,
+    "session_id": 53,
+    "room_id": 59,
     "amount": 25.5
 }
 ```
