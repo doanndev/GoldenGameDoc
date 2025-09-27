@@ -51,7 +51,7 @@ Authorization: Bearer <token>
 ```typescript
 import { io } from 'socket.io-client';
 
-const socket = io('ws://localhost:8000/lottery', {
+const socket = io('ws:{BASE_URL}/lottery', {
   transports: ['websocket', 'polling']
 });
 ```
