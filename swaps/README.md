@@ -67,7 +67,7 @@ Authorization: Bearer <jwt_token>
 
 ### `GET /swaps/sol-price`
 
-```
+```http
 202.92
 ```
 
