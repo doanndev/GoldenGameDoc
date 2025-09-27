@@ -319,6 +319,25 @@ PATCH /?id=<:id>
   https://8w7n4n91-8008.asse.devtunnels.ms/api/v1
 ```
 
+#### 5. Delete Game Room
+```http
+DELETE /?id=<:id>
+```
+
+**Description**: Soft delete a game room (sets status to DELETE)
+
+**Authentication**: Required (JWT)
+
+**Parameters**:
+- `id` (number): Game room ID
+
+**Response**:
+```json
+{
+  "message": "Game room deleted successfully"
+}
+```
+
 ## API Endpoints
 
 ### 1. Join Game Room
@@ -331,9 +350,7 @@ Tham gia vào một phòng game với session cụ thể.
 {
     "session_id": 20,
     "room_id": 34,
-    "amount": 25.5,
-    "wallet_address": "EttPfSsK9GoszoUcfsLnnbnQHMy14H2PrsX1JctXPHxT",
-    "tx_hash": "1234"
+    "amount": 25.5
 }
 ```
 
@@ -342,8 +359,6 @@ Tham gia vào một phòng game với session cụ thể.
 |-------|------|----------|-------------|
 | `session_id` | number | Yes | ID của session game |
 | `room_id` | number | Yes | ID của phòng game |
-| `wallet_address` | string | Yes | Địa chỉ ví của user |
-| `hash` | string | Yes | Hash giao dịch |
 | `amount` | number | Yes | Số tiền tham gia |
 
 #### Success Response (201)
@@ -458,24 +473,90 @@ GET /game-join-rooms?session_id=1&room_id=13&page=1&limit=10
 }
 ```
 
-#### 5. Delete Game Room
-```http
-DELETE /?id=<:id>
+---
+
+### 7. Check New Session Availability
+**GET** `/game-join-rooms/check-new-session`
+
+Kiểm tra session mới đã được tạo và sẵn sàng join chưa.
+
+#### Query Parameters
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `room_id` | number | Yes | ID của phòng game |
+
+#### Example Request
+```
+GET /game-join-rooms/check-new-session?room_id=1
 ```
 
-**Description**: Soft delete a game room (sets status to DELETE)
-
-**Authentication**: Required (JWT)
-
-**Parameters**:
-- `id` (number): Game room ID
-
-**Response**:
+#### Success Response (200)
 ```json
 {
-  "message": "Game room deleted successfully"
+  "message": "New session is available",
+  "data": {
+    "room_id": 1,
+    "latest_session_id": 2,
+    "session_status": "pending",
+    "session_available": true,
+    "can_join": true,
+    "session_start_time": "2024-01-01T12:05:00.000Z",
+    "message": "You can join the new session now"
+  }
 }
 ```
+
+#### Response Fields
+| Field | Type | Description |
+|-------|------|-------------|
+| `room_id` | number | ID của phòng game |
+| `latest_session_id` | number | ID của session mới nhất |
+| `session_status` | string | Trạng thái session (pending/running/out/end) |
+| `session_available` | boolean | Session mới có sẵn sàng không |
+| `can_join` | boolean | Có thể join session mới không |
+| `session_start_time` | string | Thời gian bắt đầu session |
+| `message` | string | Thông báo trạng thái |
+
+#### Possible Messages
+- `"New session is available"` - Session mới đã sẵn sàng
+- `"No new session available yet"` - Session mới chưa sẵn sàng
+- `"No session found for this room"` - Không tìm thấy session nào
+
+#### Error Responses
+| Status Code | Message | Description |
+|-------------|---------|-------------|
+| 400 | Game room not found | Không tìm thấy phòng game |
+| 500 | Error checking new session | Lỗi server |
+
+---
+
+## Updated Business Logic
+
+### Session Time Management with Auto-Creation
+- Khi tạo session mới, `time_start` được set = thời gian hiện tại + 3 phút
+- User chỉ có thể join trong vòng 3 phút sau khi session bắt đầu
+- **Mới**: Sau 3 phút, nếu số người tham gia < số giải thưởng → Session bị cancel và tự động tạo session mới sau 10 giây
+- Sau 3 phút, nếu số người tham gia >= số giải thưởng → Session tiếp tục
+
+### Auto Session Creation Flow
+1. **Session hết hạn** → Đánh dấu session cũ là `OUT`
+2. **Delay 10 giây** → Chờ 10 giây trước khi tạo session mới
+3. **Tạo session mới** → Session mới với status `PENDING`
+4. **User có thể join** → User có thể join session mới
+
+### Room Status Flow
+1. **WAIT** → User có thể join
+2. **RUN** → Session đang chạy, không cho join mới
+3. **INACTIVE** → Phòng không hoạt động
+4. **DELETE** → Phòng đã bị xóa
+
+### Session Status Flow
+1. **PENDING** → Đang chờ người tham gia
+2. **RUNNING** → Session đang chạy
+3. **OUT** → Session hết hạn hoặc bị cancel
+4. **END** → Session đã kết thúc
+
+---
 
 ## Data Models
 
