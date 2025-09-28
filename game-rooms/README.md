@@ -605,6 +605,50 @@ GET /game-join-rooms/check-new-session?room_id=1
 }
 ```
 
+```
+GET /game-join-rooms/by-room?room_id=<:id>&session_id=<:id>
+```
+
+```json
+{
+    "message": "Game join room fetched successfully",
+    "data": [
+        {
+            "id": 54,
+            "wallet_address": "HqMj8L8Y5BVj3SnjHCaUoXBG5Cix7BmyGubZbyhg866C",
+            "amount": 25.5,
+            "time_join": "2025-09-28T08:18:37.594Z",
+            "status": "executed",
+            "tx_hash": "1234567890",
+            "session": {
+                "id": 128,
+                "session": "1759047365705",
+                "time_start": "2025-09-28T08:19:05.705Z",
+                "status": "out"
+            },
+            "room": {
+                "id": 73,
+                "name": "Phòng xổ số số 1112223334445556667",
+                "participation_amount": 115,
+                "prizes_num": 5
+            },
+            "user": {
+                "id": 142862,
+                "username": "Dautay"
+            }
+        }
+    ],
+    "pagination": {
+        "page": 1,
+        "limit": 10,
+        "total": 1,
+        "totalPages": 1,
+        "hasNext": false,
+        "hasPrev": false
+    }
+}
+```
+
 #### Response Fields
 | Field | Type | Description |
 |-------|------|-------------|
