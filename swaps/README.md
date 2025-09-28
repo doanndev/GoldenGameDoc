@@ -96,20 +96,7 @@ Tạo swap order từ SOL/USDT sang MPB. Endpoint này tạo một swap order v�
 #### Response Success (200)
 ```json
 {
-  "message": "Swap order created successfully",
-  "data": {
-    "id": 123,
-    "amount_send": 1.5,
-    "amount_received": 225.375,
-    "coin_send": { "symbol": "SOL", "mint": "So11111111111111111111111111111111111111112" },
-    "coin_received": { "symbol": "MPB", "mint": "MPB_TOKEN_MINT_ADDRESS" },
-    "rate": 150.25,
-    "rate_usd_send": 100.16667,
-    "rate_usd_received": 150.25,
-    "status": "pending",
-    "message": "Swap order created successfully",
-    "user": { "id": 1, "email": "user@example.com" }
-  }
+  "message": "Swap order created successfully"
 }
 ```
 
