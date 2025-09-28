@@ -93,11 +93,9 @@ Endpoint: /game-rooms
 | `game_set_prizes` | `integer` | Get giải thưởng |
 | `join_room_num` | `integer` | Số người tham gia |
 | `joiners` | `Người tham giá` | Số người tham gia |
-| `status` | `enum` | Trạng thái phòng: 'run', 'wait' 'inactive', 'delete' (mặc định: 'run') |
 
 #### Enum GameRoomStatus
-- `RUN` = 'run' - Phòng đang chạy  
-- `INACTIVE` = 'inactive' - Phòng không hoạt động
+- `RUNNING` = 'run' - Phòng đang chạy  
 - `DELETE` = 'delete' - Phòng đã bị xóa
 
 #### Mối quan hệ
@@ -213,7 +211,6 @@ GET /
                 "id": 142859,
                 "username": "tranthe"
             },
-            "status": "run",
             "current_session": {
                 "id": 38,
                 "status": "running",
