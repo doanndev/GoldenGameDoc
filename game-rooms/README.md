@@ -83,7 +83,7 @@ Endpoint: /game-rooms
 |--------|------|-------|
 | `id` | `integer` | Primary key, tự động tăng |
 | `game_type_id` | `GameLists` | ID loại game (Foreign key) |
-| `current_session` | `GameSessions` | ID loại game (Foreign key) |
+| `current_session` | `GameSessions` | ID loại game (Foreign key). Trạng thái session (pending/running/out/end) |
 | `owner_id` | `User` | ID chủ sở hữu phòng (Foreign key) |
 | `name` | `varchar` | Tên phòng game |
 | `symbol` | `varchar` | Ký hiệu phòng game (có thể null) |
