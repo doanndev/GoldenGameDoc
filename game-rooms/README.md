@@ -83,12 +83,16 @@ Endpoint: /game-rooms
 |--------|------|-------|
 | `id` | `integer` | Primary key, tự động tăng |
 | `game_type_id` | `GameLists` | ID loại game (Foreign key) |
+| `current_session` | `GameSessions` | ID loại game (Foreign key) |
 | `owner_id` | `User` | ID chủ sở hữu phòng (Foreign key) |
 | `name` | `varchar` | Tên phòng game |
 | `symbol` | `varchar` | Ký hiệu phòng game (có thể null) |
 | `participation_amount` | `decimal` | Số tiền tham gia |
 | `total_amount` | `decimal` | Tổng số tiền tham gia của người chơi |
 | `prizes_num` | `integer` | Số lượng giải thưởng |
+| `game_set_prizes` | `integer` | Get giải thưởng |
+| `join_room_num` | `integer` | Số người tham gia |
+| `joiners` | `Người tham giá` | Số người tham gia |
 | `status` | `enum` | Trạng thái phòng: 'run', 'wait' 'inactive', 'delete' (mặc định: 'run') |
 
 #### Enum GameRoomStatus
