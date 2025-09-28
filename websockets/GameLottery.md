@@ -1,29 +1,30 @@
 # Game Lottery Module - Game Xổ Số
 
-Module thực hiện chức năng game xổ số với WebSocket real-time updates và JWT authentication.
+Module thực hiện chức năng game xổ số với API chọn số và WebSocket real-time updates.
 
 ## 🎯 Tổng quan
 
 Game xổ số hoạt động theo flow:
-1. **Activate session** → API test để activate session đã có sẵn join records
-2. **Join session room** → WebSocket join session room (GameRoomGateway)
-3. **Start lottery** → WebSocket start lottery session (GameLotteryGateway)
-4. **Chọn số real-time** → WebSocket selectNumber với JWT validation
-5. **Real-time updates** → WebSocket broadcast countdown và số đã chọn
-6. **Auto random** → Tự động random số cho người chưa chọn sau 30s
-7. **Generate kết quả** → WebSocket generate results
-8. **Hiển thị kết quả** → WebSocket push kết quả
+1. **Tạo session** → Tạo vé số dựa trên số người tham gia
+2. **Bắt đầu countdown** → 30s để người chơi chọn số
+3. **Chọn số** → API call để chọn số (REST API) trong thời gian countdown
+4. **Real-time updates** → WebSocket broadcast countdown và số đã chọn
+5. **Auto random** → Tự động random số cho người chưa chọn sau 30s
+6. **Generate kết quả** → Tự động random và lưu kết quả
+7. **Hiển thị kết quả** → WebSocket push kết quả
 
 ## 🔧 API Endpoints
 
-### 1. Test API - Activate Session
+### 1. Chọn Số (Main API)
 
 ```http
-POST /lotteries/test/activate-session
+POST /api/v1/lotteries/select-number
 Content-Type: application/json
+Authorization: Bearer <token>
 
 {
-  "sessionId": 123
+  "joinId": 123,
+  "ticketNumber": 42
 }
 ```
 
@@ -31,25 +32,17 @@ Content-Type: application/json
 ```json
 {
   "success": true,
-  "message": "Session 123 activated with 5 participants ready for testing",
-  "sessionId": 123,
-  "joinIds": [1, 2, 3, 4, 5]
+  "message": "Number selected successfully"
 }
 ```
 
-### 2. Chọn Số (WebSocket Event)
-
-```javascript
-// WebSocket event thay vì REST API
-lotterySocket.emit('selectNumber', { 
-  sessionId: 123, 
-  ticketNumber: 42 
-});
+**Error Response:**
+```json
+{
+  "success": false,
+  "message": "Ticket not available or already selected"
+}
 ```
-
-**Response Events:**
-- `numberSelected` - Thành công chọn số
-- `error` - Lỗi khi chọn số
 
 ## 🔌 WebSocket Events
 
@@ -58,55 +51,28 @@ lotterySocket.emit('selectNumber', {
 ```typescript
 import { io } from 'socket.io-client';
 
-// Game Room WebSocket (cho join session)
-const gameRoomSocket = io('http://localhost:3000/game-rooms', {
-  withCredentials: true,
-  transports: ['websocket']
-});
-
-// Lottery WebSocket (cho game logic)
-const lotterySocket = io('http://localhost:3000/lottery', {
-  withCredentials: true,
-  transports: ['websocket']
+const socket = io('ws:{BASE_URL}/lottery', {
+  transports: ['websocket', 'polling']
 });
 ```
 
-### Game Room WebSocket Events
-
-#### Client → Server Events
+### Client → Server Events
 
 | Event | Payload | Mô tả |
 |-------|---------|-------|
-| `joinSession` | `{ sessionId: number }` | Join session room (cần JWT validation) |
+| `startSession` | `{ sessionId: number }` | Bắt đầu session - tạo vé số và countdown 30s |
+| `getSelectedNumbers` | `{ sessionId: number }` | Lấy số đã chọn (không cần thiết - server tự động broadcast) |
+| `generateResults` | `{ sessionId: number, roomId: number }` | Generate kết quả (không cần thiết - server tự động generate) |
 
-#### Server → Client Events
-
-| Event | Payload | Mô tả |
-|-------|---------|-------|
-| `sessionUserCount` | `{ sessionId, userCount, timestamp }` | Số lượng user trong session |
-| `error` | `{ message, timestamp }` | Lỗi |
-
-### Lottery WebSocket Events
-
-#### Client → Server Events
-
-| Event | Payload | Mô tả |
-|-------|---------|-------|
-| `startSession` | `{ sessionId: number }` | Bắt đầu lottery session |
-| `selectNumber` | `{ sessionId: number, ticketNumber: number }` | Chọn số (cần JWT validation) |
-| `getSelectedNumbers` | `{ sessionId: number }` | Lấy số đã chọn |
-| `generateResults` | `{ sessionId: number }` | Generate kết quả |
-
-#### Server → Client Events
+### Server → Client Events
 
 | Event | Payload | Mô tả |
 |-------|---------|-------|
 | `sessionStarted` | `{ sessionId, totalTickets, tickets, message, timestamp }` | Session đã bắt đầu |
-| `countdownUpdate` | `{ sessionId, timeLeft, isActive, timestamp }` | Cập nhật countdown timer |
-| `selectNumberUpdated` | `{ sessionId, joinId, ticketNumber, message, timestamp }` | Cập nhật số đã chọn |
-| `numberSelected` | `{ sessionId, ticketNumber, message, timestamp }` | Thành công chọn số |
-| `autoSelectionCompleted` | `{ sessionId, autoSelectedCount, timestamp }` | Hoàn thành auto random số |
-| `resultsGenerated` | `{ sessionId, winningNumber, winners, timestamp }` | Kết quả game |
+| `countdownUpdate` | `{ sessionId, roomId, timeLeft, isActive, timestamp }` | Cập nhật countdown timer (mỗi giây) |
+| `selectNumberUpdated` | `{ joinId, selectedNumbers, totalSelected, selectedNumbersWithClient, timestamp }` | Cập nhật số đã chọn |
+| `autoSelectionCompleted` | `{ sessionId, roomId, autoSelectedCount, timestamp }` | Hoàn thành auto random số |
+| `gameResults` | `{ sessionId, roomId, winningNumbers, results, timestamp }` | Kết quả game |
 | `error` | `{ message, timestamp }` | Lỗi |
 
 ## ⚛️ React Hook Integration
@@ -119,68 +85,65 @@ import { io, Socket } from 'socket.io-client';
 
 interface LotteryGameState {
   isConnected: boolean;
-  selectedNumbers: Array<{
-    joinId: number;
-    ticketNumber: number;
-    message: string;
-    timestamp: string;
-  }>;
+  selectedNumbers: number[];
+  totalSelected: number;
+  selectedNumbersWithClient: any[];
+  winningNumbers: number[];
+  gameResults: any[];
   countdown: {
     timeLeft: number;
     isActive: boolean;
   };
-  results: {
-    winningNumber: number;
-    winners: any[];
-    timestamp: string;
-  } | null;
+  autoSelectedCount: number;
   error: string | null;
 }
 
 interface UseLotteryGameReturn {
   state: LotteryGameState;
-  selectNumber: (sessionId: number, ticketNumber: number) => void;
+  selectNumber: (joinId: number, ticketNumber: number) => Promise<void>;
+  startSession: (sessionId: number) => void;
+  // getSelectedNumbers: (sessionId: number) => void; // Không cần thiết - server tự động broadcast
+  // generateResults: (sessionId: number, roomId: number) => void; // Không cần thiết - server tự động generate
   connect: () => void;
   disconnect: () => void;
 }
 
-export const useLotteryGame = (serverUrl: string = 'http://localhost:3000'): UseLotteryGameReturn => {
-  const [lotterySocket, setLotterySocket] = useState<Socket | null>(null);
-  
+export const useLotteryGame = (serverUrl: string = 'ws://localhost:8000'): UseLotteryGameReturn => {
+  const [socket, setSocket] = useState<Socket | null>(null);
   const [state, setState] = useState<LotteryGameState>({
     isConnected: false,
     selectedNumbers: [],
+    totalSelected: 0,
+    selectedNumbersWithClient: [],
+    winningNumbers: [],
+    gameResults: [],
     countdown: {
       timeLeft: 0,
       isActive: false
     },
-    results: null,
+    autoSelectedCount: 0,
     error: null
   });
 
   // Kết nối WebSocket
   const connect = useCallback(() => {
-    const lottery = io(`${serverUrl}/lottery`, {
-      withCredentials: true,
-      transports: ['websocket']
+    const newSocket = io(`${serverUrl}/lottery`, {
+      transports: ['websocket', 'polling']
     });
 
-    lottery.on('connect', () => {
+    newSocket.on('connect', () => {
       setState(prev => ({ ...prev, isConnected: true, error: null }));
     });
 
-    lottery.on('disconnect', () => {
+    newSocket.on('disconnect', () => {
       setState(prev => ({ ...prev, isConnected: false }));
     });
 
-    lottery.on('selectNumberUpdated', (data) => {
-      setState(prev => ({
-        ...prev,
-        selectedNumbers: [...prev.selectedNumbers, data]
-      }));
+    newSocket.on('sessionStarted', (data) => {
+      console.log('Session started:', data);
     });
 
-    lottery.on('countdownUpdate', (data) => {
+    newSocket.on('countdownUpdate', (data) => {
       setState(prev => ({
         ...prev,
         countdown: {
@@ -190,57 +153,112 @@ export const useLotteryGame = (serverUrl: string = 'http://localhost:3000'): Use
       }));
     });
 
-    lottery.on('resultsGenerated', (data) => {
+    newSocket.on('selectNumberUpdated', (data) => {
       setState(prev => ({
         ...prev,
-        results: data
+        selectedNumbers: data.selectedNumbers,
+        totalSelected: data.totalSelected,
+        selectedNumbersWithClient: data.selectedNumbersWithClient
       }));
     });
 
-    lottery.on('error', (error) => {
-      setState(prev => ({ ...prev, error: error.message }));
+    newSocket.on('autoSelectionCompleted', (data) => {
+      setState(prev => ({
+        ...prev,
+        autoSelectedCount: data.autoSelectedCount
+      }));
     });
 
-    setLotterySocket(lottery);
+    newSocket.on('gameResults', (data) => {
+      setState(prev => ({
+        ...prev,
+        winningNumbers: data.winningNumbers,
+        gameResults: data.results
+      }));
+    });
+
+    newSocket.on('error', (data) => {
+      setState(prev => ({ ...prev, error: data.message }));
+    });
+
+    setSocket(newSocket);
   }, [serverUrl]);
 
   // Ngắt kết nối
   const disconnect = useCallback(() => {
-    if (lotterySocket) {
-      lotterySocket.disconnect();
-      setLotterySocket(null);
+    if (socket) {
+      socket.disconnect();
+      setSocket(null);
     }
-  }, [lotterySocket]);
+  }, [socket]);
 
-  // Chọn số
-  const selectNumber = useCallback((sessionId: number, ticketNumber: number) => {
-    if (lotterySocket) {
-      lotterySocket.emit('selectNumber', { sessionId, ticketNumber });
+  // Chọn số qua API
+  const selectNumber = useCallback(async (joinId: number, ticketNumber: number) => {
+    try {
+      const response = await fetch(`${serverUrl.replace('ws://', 'http://')}/api/v1/lotteries/select-number`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({ joinId, ticketNumber })
+      });
+
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.message || 'Failed to select number');
+      }
+
+      // WebSocket sẽ tự động nhận event selectNumberUpdated
+    } catch (error) {
+      setState(prev => ({ ...prev, error: error.message }));
     }
-  }, [lotterySocket]);
+  }, [serverUrl]);
+
+  // Bắt đầu session
+  const startSession = useCallback((sessionId: number) => {
+    if (socket) {
+      socket.emit('startSession', { sessionId });
+    }
+  }, [socket]);
+
+  // Lấy số đã chọn (không cần thiết - server tự động broadcast khi có người chọn số)
+  // const getSelectedNumbers = useCallback((sessionId: number) => {
+  //   if (socket) {
+  //     socket.emit('getSelectedNumbers', { sessionId });
+  //   }
+  // }, [socket]);
+
+  // Generate kết quả
+  const generateResults = useCallback((sessionId: number, roomId: number) => {
+    if (socket) {
+      socket.emit('generateResults', { sessionId, roomId });
+    }
+  }, [socket]);
 
   // Cleanup
   useEffect(() => {
     return () => {
-      if (lotterySocket) {
-        lotterySocket.disconnect();
+      if (socket) {
+        socket.disconnect();
       }
     };
-  }, [lotterySocket]);
+  }, [socket]);
 
   return {
     state,
     selectNumber,
+    startSession,
+    // getSelectedNumbers, // Không cần thiết - server tự động broadcast
+    // generateResults, // Không cần thiết - server tự động generate
     connect,
     disconnect
   };
 };
 ```
-```
 
-```
-
-### Sử dụng Hook Production
+### Sử dụng Hook trong Component
 
 ```typescript
 import React from 'react';
@@ -250,12 +268,19 @@ const LotteryGameComponent: React.FC = () => {
   const {
     state,
     selectNumber,
+    startSession,
+    // getSelectedNumbers, // Không cần thiết - server tự động broadcast
+    // generateResults, // Không cần thiết - server tự động generate
     connect,
     disconnect
-  } = useLotteryGame('http://localhost:3000');
+  } = useLotteryGame('ws://localhost:8000');
 
-  const handleSelectNumber = (ticketNumber: number) => {
-    selectNumber(123, ticketNumber); // sessionId từ props hoặc context
+  const handleSelectNumber = async () => {
+    await selectNumber(123, 42);
+  };
+
+  const handleStartSession = () => {
+    startSession(1);
   };
 
   return (
@@ -268,6 +293,15 @@ const LotteryGameComponent: React.FC = () => {
         </button>
         <button onClick={disconnect} disabled={!state.isConnected}>
           Ngắt kết nối
+        </button>
+      </div>
+
+      <div>
+        <button onClick={handleStartSession}>
+          Bắt đầu Session
+        </button>
+        <button onClick={handleSelectNumber}>
+          Chọn số 42
         </button>
       </div>
 
@@ -294,47 +328,22 @@ const LotteryGameComponent: React.FC = () => {
         </div>
       )}
 
-      {/* Number Selection */}
       <div>
-        <h3>Chọn số của bạn:</h3>
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => (
-            <button
-              key={num}
-              onClick={() => handleSelectNumber(num)}
-              disabled={!state.isConnected || !state.countdown.isActive}
-              style={{
-                width: '50px',
-                height: '50px',
-                border: '2px solid #007bff',
-                borderRadius: '50%',
-                background: 'white',
-                color: '#007bff',
-                fontSize: '18px',
-                fontWeight: 'bold',
-                cursor: 'pointer'
-              }}
-            >
-              {num}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Selected Numbers */}
-      <div>
-        <h3>Số đã chọn:</h3>
+        <h3>Số đã chọn: {state.totalSelected}</h3>
+        {state.autoSelectedCount > 0 && (
+          <p>Đã tự động chọn số cho {state.autoSelectedCount} người chơi</p>
+        )}
         <ul>
-          {state.selectedNumbers.map((item, index) => (
+          {state.selectedNumbersWithClient.map((item, index) => (
             <li key={index}>
-              Số {item.ticketNumber} - {item.message}
+              Số {item.ticketNumber} - {item.clientInfo.username}
             </li>
           ))}
         </ul>
       </div>
 
-      {/* Results */}
-      {state.results && (
+      {/* Game Results */}
+      {state.gameResults.length > 0 && (
         <div style={{ 
           background: '#f8f9fa', 
           border: '2px solid #e9ecef', 
@@ -343,8 +352,25 @@ const LotteryGameComponent: React.FC = () => {
           margin: '20px 0'
         }}>
           <h3>🏆 Kết Quả Game</h3>
-          <p><strong>Số trúng thưởng:</strong> {state.results.winningNumber}</p>
-          <p><strong>Số người thắng:</strong> {state.results.winners.length}</p>
+          <div>
+            <h4>Số trúng thưởng:</h4>
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+              {state.winningNumbers.map((number, index) => (
+                <div key={index} style={{
+                  background: 'linear-gradient(45deg, #f39c12, #e67e22)',
+                  color: 'white',
+                  padding: '10px 15px',
+                  borderRadius: '50%',
+                  fontWeight: 'bold',
+                  fontSize: '18px',
+                  minWidth: '50px',
+                  textAlign: 'center'
+                }}>
+                  {number}
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       )}
 
@@ -354,8 +380,8 @@ const LotteryGameComponent: React.FC = () => {
         </div>
       )}
     </div>
-    );
-  };
+  );
+};
 
 export default LotteryGameComponent;
 ```
@@ -363,34 +389,12 @@ export default LotteryGameComponent;
 
 ## 🔄 Flow hoạt động chi tiết
 
-### 1. **Setup Phase**
-- **Tester gọi API activate session** → `POST /lotteries/test/activate-session`
-- **Server activate session** → Set status = RUNNING, join records = EXECUTED
-- **Client kết nối WebSocket** → Game Room + Lottery WebSocket
-
-### 2. **Join Phase**
-- **Client join session room** → `gameRoomSocket.emit('joinSession', { sessionId })`
-- **Server validate JWT** → Kiểm tra userId có trong joinId của session
-- **Server emit sessionUserCount** → Broadcast số lượng user trong session
-
-### 3. **Start Game Phase**
-- **Client start lottery** → `lotterySocket.emit('startSession', { sessionId })`
-- **Server tạo vé số** → Dựa trên số join records
-- **Server emit sessionStarted** → Thông báo session đã bắt đầu
-- **Server bắt đầu countdown** → 30s timer
-
-### 4. **Game Phase**
-- **Server emit countdownUpdate** → Broadcast countdown timer mỗi giây
-- **Client chọn số** → `lotterySocket.emit('selectNumber', { sessionId, ticketNumber })`
-- **Server validate JWT** → Kiểm tra userId có trong joinId
-- **Server lưu số đã chọn** → Database + emit selectNumberUpdated
-- **Server emit numberSelected** → Confirm cho client đã chọn
-
-### 5. **Auto Selection Phase**
-- **Hết 30s countdown** → Server tự động random số cho người chưa chọn
-- **Server emit autoSelectionCompleted** → Thông báo hoàn thành auto random
-
-### 6. **Results Phase**
-- **Server tự động generate results** → Random số trúng thưởng
-- **Server emit resultsGenerated** → Broadcast kết quả cho tất cả clients
-- **Client hiển thị kết quả** → Winning number + winners
+1. **Client kết nối WebSocket** → Nhận real-time updates
+2. **Client gọi startSession** → Server tạo vé số và bắt đầu countdown 30s
+3. **Server emit countdownUpdate** → Broadcast countdown timer mỗi giây
+4. **Client gọi API chọn số** → Server lưu vào database (trong thời gian countdown)
+5. **Server emit selectNumberUpdated** → Tất cả clients nhận update số đã chọn
+6. **Hết 30s** → Server tự động random số cho người chưa chọn
+7. **Server emit autoSelectionCompleted** → Thông báo hoàn thành auto random
+8. **Server tự động generateResults** → Random và lưu kết quả
+9. **Server emit gameResults** → Broadcast kết quả cho tất cả clients
