@@ -335,52 +335,59 @@ GET /find-by-id?id=<:id>
 **Response**:
 ```json
 {
-    "message": "Game room fetched successfully",
-    "data": [
-        {
-            "id": 59,
-            "name": "Phòng game 59",
-            "symbol": "SYMBOL 1111",
-            "participation_amount": 30,
-            "prizes_num": 5,
-            "total_amount": 0,
-            "status": "run",
-            "game_type_id": {
-                "id": 1,
-                "name": "Xổ số BLOCKCHAIN",
-                "symbol": "symbol",
-                "status": "active"
+    "message": "Game room details fetched successfully",
+    "data": {
+        "id": 73,
+        "name": "Phòng xổ số số 1112223334445556667",
+        "symbol": "https://m.media-amazon.com/images/I/71GNE098B4L.jpg",
+        "participation_amount": 115,
+        "prizes_num": 5,
+        "total_amount": 0,
+        "game_type_id": {
+            "id": 1,
+            "name": "Xổ số BLOCKCHAIN",
+            "symbol": "symbol",
+            "status": "active"
+        },
+        "status": "run",
+        "owner_id": {
+            "id": 142859,
+            "username": "tranthe"
+        },
+        "current_session": {
+            "id": 171,
+            "status": "pending",
+            "time_start": "2025-09-28T09:52:13.304Z",
+            "session": "1759052953304",
+            "participants_count": 1,
+            "max_participants": 3,
+            "can_join": true
+        },
+        "game_set_prizes": [
+            {
+                "rank": 1,
+                "percent": 60
             },
-            "owner_id": {
-                "id": 142859,
-                "username": "tranthe"
+            {
+                "rank": 2,
+                "percent": 30
             },
-            "game_set_prizes": [
-                {
-                    "rank": 1,
-                    "percent": 40
-                },
-                {
-                    "rank": 2,
-                    "percent": 30
-                },
-                {
-                    "rank": 3,
-                    "percent": 20
-                },
-                {
-                    "rank": 4,
-                    "percent": 6
-                },
-                {
-                    "rank": 5,
-                    "percent": 4
-                }
-            ],
-            "join_room_num": 0,
-            "joiners": []
-        }
-    ]
+            {
+                "rank": 3,
+                "percent": 10
+            }
+        ],
+        "join_room_num": 1,
+        "joiners": [
+            {
+                "username": "tranthe",
+                "amount": 25.5,
+                "status": "executed",
+                "time_join": "2025-09-28T09:50:48.683Z",
+                "tx_hash": "1234567890"
+            }
+        ]
+    }
 }
 ```
 
