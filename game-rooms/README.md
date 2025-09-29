@@ -196,12 +196,12 @@ GET /
     "message": "Game rooms fetched successfully",
     "data": [
         {
-            "id": 52,
-            "name": "Phòng game 111222333444555666777888999222555",
+            "id": 73,
+            "name": "Phòng xổ số số 1112223334445556667",
             "symbol": "https://m.media-amazon.com/images/I/71GNE098B4L.jpg",
-            "participation_amount": 10,
-            "prizes_num": 1,
-            "total_amount": 153,
+            "participation_amount": 115,
+            "prizes_num": 5,
+            "total_amount": 687,
             "game_type_id": {
                 "id": 1,
                 "name": "Xổ số BLOCKCHAIN",
@@ -213,108 +213,21 @@ GET /
                 "username": "tranthe"
             },
             "current_session": {
-                "id": 38,
-                "status": "running",
-                "time_start": "2025-09-27T05:09:44.181Z",
-                "session": "1758949604181"
-            },
-            "game_set_prizes": [
-                {
-                    "rank": 1,
-                    "percent": 100
-                }
-            ],
-            "join_room_num": 8,
-            "joiners": [
-                {
-                    "username": "thanhnhan",
-                    "amount": 25.5,
-                    "time_join": "2025-09-27T05:07:29.688Z"
-                },
-                {
-                    "username": "Dautay",
-                    "amount": 25.5,
-                    "time_join": "2025-09-27T05:07:29.688Z"
-                },
-                {
-                    "username": "Dautay",
-                    "amount": 25.5,
-                    "time_join": "2025-09-27T06:45:25.371Z"
-                },
-                {
-                    "username": "tranthe",
-                    "amount": 25.5,
-                    "time_join": "2025-09-27T06:44:59.400Z"
-                },
-                {
-                    "username": "Dautay",
-                    "amount": 25.5,
-                    "time_join": "2025-09-27T06:28:07.265Z"
-                },
-                {
-                    "username": "tranthe",
-                    "amount": 25.5,
-                    "time_join": "2025-09-27T06:27:38.241Z"
-                },
-                {
-                    "username": "Dautay",
-                    "amount": 25.5,
-                    "time_join": "2025-09-27T05:07:29.688Z"
-                },
-                {
-                    "username": "tranthe",
-                    "amount": 25.5,
-                    "time_join": "2025-09-27T05:06:59.835Z"
-                }
-            ]
-        },
-        {
-            "id": 45,
-            "name": "Phòng game 111222333444",
-            "symbol": "https://m.media-amazon.com/images/I/71GNE098B4L.jpg",
-            "participation_amount": 10,
-            "prizes_num": 3,
-            "total_amount": 102,
-            "game_type_id": {
-                "id": 1,
-                "name": "Xổ số BLOCKCHAIN",
-                "symbol": "symbol",
-                "status": "active"
-            },
-            "owner_id": {
-                "id": 142859,
-                "username": "tranthe"
-            },
-            "status": "wait",
-            "current_session": {
-                "id": 31,
-                "status": "running",
-                "time_start": "2025-09-27T03:07:26.676Z",
-                "session": "1758942266676"
-            },
-            "game_set_prizes": [
-                {
-                    "rank": 1,
-                    "percent": 50
-                },
-                {
-                    "rank": 2,
-                    "percent": 30
-                },
-                {
-                    "rank": 3,
-                    "percent": 20
-                }
-            ],
-            "join_room_num": 0,
-            "joiners": []
+                "id": 2108,
+                "status": "pending",
+                "time_start": "2025-09-29T09:43:55.290Z",
+                "session": "Phòng xổ số số 1112223334445556667_nmgs69ytx8ou4gp60utymo1fyfh3kjkk",
+                "participants_count": 3,
+                "max_participants": 3,
+                "can_join": false
+            }
         }
     ],
     "pagination": {
         "page": 1,
-        "limit": 2,
-        "total": 52,
-        "totalPages": 26,
+        "limit": 1,
+        "total": 91,
+        "totalPages": 91,
         "hasNext": true,
         "hasPrev": false
     }
