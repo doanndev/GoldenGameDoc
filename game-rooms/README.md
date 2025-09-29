@@ -322,7 +322,7 @@ GET /
 
 #### 3. Get Game Room by ID
 ```http
-GET /find-by-id?id=<:id>
+GET /find-by-id?room_id=<:id>
 ```
 
 **Description**: Retrieve a specific game room by ID
