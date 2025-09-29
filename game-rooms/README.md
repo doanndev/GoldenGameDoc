@@ -340,7 +340,7 @@ PATCH /?id=<:id>
 DELETE /?id=<:id>
 ```
 
-**Description**: Soft delete a game room (sets status to DELETE)
+**Description**: Soft delete a game room (sets status to DELETE), xóa phòng ở bảng game_room còn trạng thái của game_session mà liên kết với bảng game_room thì được hiển thị realtime nếu phòng đó đang chơi game, và sau khi kết thúc game thì phòng bị xóa
 
 **Authentication**: Required (JWT)
 
