@@ -187,6 +187,7 @@ GET /
 - `limit` (number, optional): Items per page (default: 10)
 - `room_id` (number, optional): Filter by game room id
 - `host_id` (number, optional): Filter by game room owner id
+- `game_type_id` (number, optional): Filter by game room game type id
 - `host`  (string, optional): Filter by gmae room host
 
 **Response**:
