@@ -178,7 +178,7 @@ status 400
 GET /
 ```
 
-**Description**: Retrieve game rooms with pagination and filtering
+**Description**: Retrieve game rooms with pagination and filtering, Để biết phòng nào có đang chờ, hay đang chơi thì dựa vào status của game_session(current_session)
 
 **Authentication**: Required (JWT)
 
