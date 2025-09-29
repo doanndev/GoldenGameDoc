@@ -319,7 +319,7 @@ GET /find-by-id?room_id=<:id>
 PATCH /?id=<:id>
 ```
 
-**Description**: Update an existing game room and its prize structure
+**Description**: Update an existing game room, thay đổi tên phòng, số tiền đặt cượt của phòng bằng giá mới, sau khi trạng thái session game end thì trong khoản thời gian 10s sẽ được cập nhật lại thông tin phòng
 
 **Authentication**: Required (JWT)
 
