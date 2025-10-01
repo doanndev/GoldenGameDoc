@@ -92,6 +92,7 @@ curl -X GET http://localhost:3000/admin/auth/me \
 
 **Description:** Logout current admin and clear session.
 
+**Headers:** `Authorization: Bearer <admin_jwt_token>` or Cookie: `admin_access_token`
 
 **Response:**
 ```json
@@ -105,6 +106,32 @@ curl -X GET http://localhost:3000/admin/auth/me \
 curl -X POST http://localhost:3000/admin/auth/logout \
   -H "Authorization: Bearer <admin_jwt_token>"
 ```
+
+---
+
+### 4. Refresh Access Token
+
+**Endpoint:** `POST /admin/auth/refresh`
+
+**Description:** Refresh access token using refresh token from cookie.
+
+**Headers:** Cookie: `admin_refresh_token` (automatically sent by browser)
+
+**Response:**
+```json
+{
+  "message": "Token refreshed successfully"
+}
+```
+
+**cURL Example:**
+```bash
+curl -X POST http://localhost:3000/admin/auth/refresh \
+  -b cookies.txt \
+  -c cookies.txt
+```
+
+**Note:** This endpoint automatically sets a new `admin_access_token` cookie. No authentication required as it uses the refresh token.
 
 ---
 
@@ -593,7 +620,14 @@ curl -X GET http://localhost:3000/admin/auth/me \
   -H "Authorization: Bearer <admin_jwt_token>"
 ```
 
-7. **Logout:**
+7. **Refresh Access Token:**
+```bash
+curl -X POST http://localhost:3000/admin/auth/refresh \
+  -b cookies.txt \
+  -c cookies.txt
+```
+
+8. **Logout:**
 ```bash
 curl -X POST http://localhost:3000/admin/auth/logout \
   -H "Authorization: Bearer <admin_jwt_token>"
