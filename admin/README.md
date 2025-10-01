@@ -25,7 +25,7 @@ This document provides comprehensive API documentation for the Admin module, inc
 ```json
 {
   "username": "superadmin",
-  "password": "1234"
+  "password": "123456"
 }
 ```
 
