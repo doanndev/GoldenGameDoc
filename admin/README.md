@@ -437,22 +437,6 @@ curl -X DELETE http://localhost:3000/admin/roles/5 \
 ```
 
 ---
-
-### 6. Get Available Roles
-
-**Endpoint:** `GET /admin/roles/available`
-
-**Description:** Get all available roles for admin creation.
-
-
-**Response:** Same as Get All Roles
-
-**cURL Example:**
-```bash
-curl -X GET http://localhost:3000/admin/roles/available \
-  -H "Authorization: Bearer <admin_jwt_token>"
-```
-
 ---
 
 ## Permission Management APIs
