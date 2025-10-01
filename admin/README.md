@@ -25,7 +25,7 @@ This document provides comprehensive API documentation for the Admin module, inc
 ```json
 {
   "username": "superadmin",
-  "password": "123456"
+  "password": "1234"
 }
 ```
 
@@ -110,7 +110,52 @@ curl -X POST http://localhost:3000/admin/auth/logout \
 
 ## Admin Management APIs
 
-### 1. Create New Admin
+### 1. Get All Admins
+
+**Endpoint:** `GET /admin/list`
+
+**Description:** Get all admin accounts with basic information.
+
+**Headers:** `Authorization: Bearer <admin_jwt_token>`
+
+**Response:**
+```json
+{
+  "admins": [
+    {
+      "id": 1,
+      "username": "superadmin",
+      "email": "superadmin@goldengame.com",
+      "fullname": "Super Administrator",
+      "avatar": null,
+      "phone": null,
+      "level": "super_admin",
+      "role": {
+        "id": 1,
+        "name": "Super Admin",
+        "description": "Full system access with all permissions"
+      },
+      "last_login": "2025-01-10T10:30:00.000Z",
+      "last_ip": "127.0.0.1",
+      "status": "active",
+      "two_factor_enabled": false,
+      "created_at": "2025-01-10T10:30:00.000Z",
+      "updated_at": "2025-01-10T10:30:00.000Z"
+    }
+  ],
+  "total": 1
+}
+```
+
+**cURL Example:**
+```bash
+curl -X GET http://localhost:3000/admin/list \
+  -H "Authorization: Bearer <admin_jwt_token>"
+```
+
+---
+
+### 2. Create New Admin
 
 **Endpoint:** `POST /admin/create`
 
@@ -159,7 +204,7 @@ curl -X POST http://localhost:3000/admin/create \
 
 **Endpoint:** `GET /admin/roles`
 
-**Description:** Get all available roles with their permissions.
+**Description:** Get all available roles (permissions details only available in get role by ID).
 
 
 **Response:**
@@ -173,21 +218,19 @@ curl -X POST http://localhost:3000/admin/create \
       "status": "active",
       "created_at": "2025-01-10T10:30:00.000Z",
       "updated_at": "2025-01-10T10:30:00.000Z",
-      "permissions": [
-        {
-          "id": 1,
-          "name": "users.create",
-          "resource": "users",
-          "action": "create",
-          "description": "Create new users",
-          "status": "active",
-          "created_at": "2025-01-10T10:30:00.000Z",
-          "updated_at": "2025-01-10T10:30:00.000Z"
-        }
-      ]
+      "permissions": []
+    },
+    {
+      "id": 2,
+      "name": "Admin",
+      "description": "Standard admin role",
+      "status": "active",
+      "created_at": "2025-01-10T10:30:00.000Z",
+      "updated_at": "2025-01-10T10:30:00.000Z",
+      "permissions": []
     }
   ],
-  "total": 1
+  "total": 2
 }
 ```
 
@@ -498,13 +541,19 @@ curl -X POST http://localhost:3000/admin/auth/login \
   -c cookies.txt
 ```
 
-2. **Get Available Roles:**
+2. **Get All Admins:**
+```bash
+curl -X GET http://localhost:3000/admin/list \
+  -H "Authorization: Bearer <admin_jwt_token>"
+```
+
+3. **Get Available Roles:**
 ```bash
 curl -X GET http://localhost:3000/admin/roles/available \
   -H "Authorization: Bearer <admin_jwt_token>"
 ```
 
-3. **Get All Permissions:**
+4. **Get All Permissions:**
 ```bash
 curl -X GET http://localhost:3000/admin/permissions \
   -H "Authorization: Bearer <admin_jwt_token>"
