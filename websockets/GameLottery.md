@@ -29,6 +29,10 @@ interface LotteryGameState {
     timeLeft: number;
     isActive: boolean;
   };
+  autoStartCountdown: {
+    timeLeft: number;
+    isActive: boolean;
+  };
   gameResults: {
     winningNumbers: number[];
     results: Array<{
@@ -37,6 +41,28 @@ interface LotteryGameState {
       percent: number;
       winner: any;
     }>;
+  } | null;
+  prizes: {
+    prizes: Array<{
+      rank: number;
+      percent: number;
+      winningNumber: number;
+      view_status: boolean;
+      winner: {
+        user_id: number;
+        username: string;
+        fullname: string;
+        avatar: string;
+        wallet_address: string;
+        join_id: number;
+        amount: number;
+        total_amount: number;
+        time_join: Date;
+      } | null;
+    }>;
+    totalPrizes: number;
+    totalViewed: number;
+    totalNotViewed: number;
   } | null;
   error: string | null;
   isLoading: boolean;
@@ -71,7 +97,12 @@ export const useLotteryGame = (serverUrl: string = 'ws://localhost:3000'): UseLo
       timeLeft: 0,
       isActive: false
     },
+    autoStartCountdown: {
+      timeLeft: 0,
+      isActive: false
+    },
     gameResults: null,
+    prizes: null,
     error: null,
     isLoading: false
   });
@@ -120,12 +151,58 @@ export const useLotteryGame = (serverUrl: string = 'ws://localhost:3000'): UseLo
     });
 
     // Game events
+    socket.on('sessionAutoStartScheduled', (data) => {
+      console.log('Session auto-start scheduled:', data);
+      const { delay } = data;
+      setState(prev => ({ 
+        ...prev, 
+        autoStartCountdown: {
+          timeLeft: delay / 1000,
+          isActive: true
+        },
+        error: null 
+      }));
+      
+      // Start countdown timer
+      const countdownInterval = setInterval(() => {
+        setState(prev => {
+          if (prev.autoStartCountdown.timeLeft <= 1) {
+            clearInterval(countdownInterval);
+            return {
+              ...prev,
+              autoStartCountdown: { timeLeft: 0, isActive: false }
+            };
+          }
+          return {
+            ...prev,
+            autoStartCountdown: {
+              ...prev.autoStartCountdown,
+              timeLeft: prev.autoStartCountdown.timeLeft - 1
+            }
+          };
+        });
+      }, 1000);
+    });
+
     socket.on('sessionStarted', (data) => {
       console.log('Session started:', data);
       setState(prev => ({ 
         ...prev, 
         totalTickets: data.totalTickets,
         availableTickets: data.tickets,
+        autoStartCountdown: { timeLeft: 0, isActive: false }, // Reset auto-start countdown
+        error: null 
+      }));
+    });
+
+    socket.on('numbersInfo', (data) => {
+      console.log('Numbers info received:', data);
+      setState(prev => ({ 
+        ...prev, 
+        totalTickets: data.totalTickets,
+        availableTickets: data.tickets || [],
+        selectedNumbers: data.selectedNumbers || [],
+        selectedNumbersWithClient: data.selectedNumbersWithClient || [],
         error: null 
       }));
     });
@@ -171,6 +248,15 @@ export const useLotteryGame = (serverUrl: string = 'ws://localhost:3000'): UseLo
       }));
     });
 
+    socket.on('prizeViewed', (data) => {
+      console.log('Prize viewed:', data);
+      setState(prev => ({ 
+        ...prev, 
+        prizes: data.prizes,
+        error: null 
+      }));
+    });
+
     socket.on('numberSelected', (data) => {
       console.log('Number selected successfully:', data);
       setState(prev => ({ 
@@ -204,7 +290,9 @@ export const useLotteryGame = (serverUrl: string = 'ws://localhost:3000'): UseLo
       selectedNumbers: [],
       selectedNumbersWithClient: [],
       gameResults: null,
-      countdown: { timeLeft: 0, isActive: false }
+      prizes: null,
+      countdown: { timeLeft: 0, isActive: false },
+      autoStartCountdown: { timeLeft: 0, isActive: false }
     }));
     setIsAuthenticated(false);
   }, []);
@@ -309,7 +397,9 @@ const LotteryGameComponent: React.FC = () => {
     selectedNumbers,
     selectedNumbersWithClient,
     countdown,
+    autoStartCountdown,
     gameResults,
+    prizes,
     error,
     isLoading,
     
@@ -391,6 +481,14 @@ const LotteryGameComponent: React.FC = () => {
         )}
       </div>
 
+      {/* Auto-start Countdown */}
+      {autoStartCountdown.isActive && (
+        <div className="auto-start-countdown">
+          <h3>Session will auto-start in: {autoStartCountdown.timeLeft}s</h3>
+          <p>Please join the session room if you haven't already.</p>
+        </div>
+      )}
+
       {/* Game Info */}
       {totalTickets > 0 && (
         <div className="game-info">
@@ -399,7 +497,7 @@ const LotteryGameComponent: React.FC = () => {
           <p>Available Tickets: {availableTickets.join(', ')}</p>
           <p>Selected Numbers: {selectedNumbers.join(', ')}</p>
           
-          {/* Countdown */}
+          {/* Game Countdown */}
           {countdown.isActive && (
             <div className="countdown">
               <h4>Time Left: {countdown.timeLeft}s</h4>
@@ -453,6 +551,27 @@ const LotteryGameComponent: React.FC = () => {
             {gameResults.results.map((result, index) => (
               <div key={index} className="result-item">
                 <span>Number {result.winningNumber} - Rank {result.rank} - {result.percent}%</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Prizes Status */}
+      {prizes && (
+        <div className="prizes-status">
+          <h3>Prizes Status</h3>
+          <p>Total: {prizes.totalPrizes} | Viewed: {prizes.totalViewed} | Not Viewed: {prizes.totalNotViewed}</p>
+          <div className="prizes-list">
+            {prizes.prizes.map((prize, index) => (
+              <div key={index} className={`prize-item ${prize.view_status ? 'viewed' : 'not-viewed'}`}>
+                <span>Rank {prize.rank} - Number {prize.winningNumber} - {prize.percent}%</span>
+                <span className="status">{prize.view_status ? '✓ Viewed' : '○ Not Viewed'}</span>
+                {prize.winner && (
+                  <div className="winner-info">
+                    <span>Winner: {prize.winner.username} ({prize.winner.fullname})</span>
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -548,6 +667,21 @@ export default LotteryGameComponent;
   cursor: not-allowed;
 }
 
+.auto-start-countdown {
+  background: #e3f2fd;
+  color: #1976d2;
+  padding: 15px;
+  border-radius: 5px;
+  text-align: center;
+  margin: 20px 0;
+  border: 1px solid #2196f3;
+}
+
+.auto-start-countdown h3 {
+  margin: 0 0 10px 0;
+  font-size: 20px;
+}
+
 .countdown {
   background: #ffc107;
   color: #212529;
@@ -562,18 +696,44 @@ export default LotteryGameComponent;
   font-size: 24px;
 }
 
-.selected-numbers, .game-results {
+.selected-numbers, .game-results, .prizes-status {
   background: #e9ecef;
   padding: 15px;
   border-radius: 5px;
   margin: 20px 0;
 }
 
-.number-item, .result-item {
+.number-item, .result-item, .prize-item {
   display: flex;
   justify-content: space-between;
   padding: 5px 0;
   border-bottom: 1px solid #dee2e6;
+}
+
+.prize-item {
+  border-left: 4px solid #ccc;
+  padding-left: 10px;
+  margin: 5px 0;
+}
+
+.prize-item.viewed {
+  border-left-color: #28a745;
+  background: #d4edda;
+}
+
+.prize-item.not-viewed {
+  border-left-color: #ffc107;
+  background: #fff3cd;
+}
+
+.prize-item .status {
+  font-weight: bold;
+}
+
+.prize-item .winner-info {
+  font-size: 0.9em;
+  color: #666;
+  margin-top: 2px;
 }
 
 .ticket-number {
@@ -605,6 +765,56 @@ npm install socket.io-client
 yarn add socket.io-client
 ```
 
+### WebSocket Events
+
+#### Client → Server Events:
+- `joinSession`: Join vào session room
+- `startSession`: Bắt đầu session (manual)
+- `selectNumber`: Chọn số
+- `getNumbers`: Lấy thông tin vé số
+- `getSelectedNumbers`: Lấy danh sách số đã chọn
+- `generateResults`: Generate kết quả game
+
+#### Server → Client Events:
+- `sessionJoined`: Đã join session thành công
+- `sessionAutoStartScheduled`: Session sắp auto-start (2 giây trước)
+- `sessionStarted`: Session đã bắt đầu (manual hoặc auto)
+- `numbersInfo`: Thông tin vé số (tự động gửi khi session start)
+- `selectNumberUpdated`: Cập nhật số đã chọn
+- `countdownUpdate`: Cập nhật countdown game
+- `gameResults`: Kết quả game
+- `prizeViewed`: Cập nhật khi có giải được đánh dấu đã xem
+- `error`: Lỗi từ server
+
+### Auto-Start Functionality
+
+Hệ thống hỗ trợ tự động bắt đầu session lottery khi:
+
+1. **Session chuyển sang RUNNING**: Khi đủ người tham gia sau 3 phút
+2. **Game type là lottery**: Chỉ áp dụng cho game type ID = 1 (xổ số)
+3. **Delay 2 giây**: Cho phép clients có thời gian join session room
+4. **Real-time notifications**: Clients nhận được thông báo trước khi auto-start
+
+#### Luồng Auto-Start:
+
+```
+1. Session PENDING → RUNNING (sau 3 phút)
+2. Emit 'sessionAutoStartScheduled' (2 giây trước)
+3. Client hiển thị countdown UI
+4. Delay 2 giây
+5. Emit 'sessionStarted' + 'numbersInfo'
+6. Client hiển thị game interface
+```
+
+#### State management:
+
+```typescript
+autoStartCountdown: {
+  timeLeft: number;    // Thời gian còn lại (giây)
+  isActive: boolean;   // Có đang countdown không
+}
+```
+
 ### Lưu ý quan trọng
 
 1. **Authentication**: Hook này sử dụng cookies để xác thực, đảm bảo frontend gửi cookies trong WebSocket connection.
@@ -616,6 +826,43 @@ yarn add socket.io-client
 4. **Session Management**: Hook quản lý trạng thái session và tự động cleanup khi component unmount.
 
 5. **TypeScript Support**: Hook được viết với TypeScript để có type safety tốt hơn.
+
+6. **Auto-start Integration**: Hook tự động xử lý auto-start events và hiển thị countdown UI.
+
+7. **Manual vs Auto**: Hỗ trợ cả manual start (qua button) và auto-start (tự động).
+
+### Troubleshooting
+
+#### Vấn đề thường gặp:
+
+1. **Không nhận được auto-start events**:
+   - Kiểm tra đã join session room chưa
+   - Kiểm tra game type có phải là lottery (ID = 1) không
+   - Kiểm tra session status có chuyển sang RUNNING không
+
+2. **Countdown không hiển thị**:
+   - Kiểm tra event listener `sessionAutoStartScheduled`
+   - Kiểm tra state `autoStartCountdown.isActive`
+
+3. **Numbers không cập nhật**:
+   - Kiểm tra event listener `numbersInfo`
+   - Kiểm tra đã join session room chưa
+
+4. **Connection issues**:
+   - Kiểm tra WebSocket connection
+   - Kiểm tra authentication cookies
+   - Kiểm tra server URL
+
+#### Debug tips:
+
+```typescript
+// Enable debug logging
+socket.on('connect', () => console.log('Connected'));
+socket.on('disconnect', () => console.log('Disconnected'));
+socket.on('sessionAutoStartScheduled', (data) => console.log('Auto-start scheduled:', data));
+socket.on('sessionStarted', (data) => console.log('Session started:', data));
+socket.on('numbersInfo', (data) => console.log('Numbers info:', data));
+```
 
 ## License
 
