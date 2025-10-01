@@ -196,8 +196,6 @@ curl -X GET http://localhost:3000/admin/list \
   "email": "admin@example.com",
   "password": "password123",
   "fullname": "New Admin",
-  "phone": "+1234567890",
-  "avatar": "https://example.com/avatar.jpg",
   "role_id": "2"
 }
 ```
