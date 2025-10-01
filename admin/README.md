@@ -25,7 +25,7 @@ This document provides comprehensive API documentation for the Admin module, inc
 ```json
 {
   "username": "superadmin",
-  "password": "123456"
+  "password": "1234"
 }
 ```
 
@@ -42,7 +42,7 @@ curl -X POST http://localhost:3000/admin/auth/login \
   -H "Content-Type: application/json" \
   -d '{
     "username": "superadmin",
-    "password": "1234"
+    "password": "123456"
   }' \
   -c cookies.txt
 ```
@@ -196,10 +196,17 @@ curl -X GET http://localhost:3000/admin/list \
   "email": "admin@example.com",
   "password": "password123",
   "fullname": "New Admin",
-  "level": "admin",
+  "phone": "+1234567890",
+  "avatar": "https://example.com/avatar.jpg",
   "role_id": "2"
 }
 ```
+
+**Note:** The `level` field is automatically determined from the selected `role_id`. The system maps role names to admin levels:
+- "Super Admin" → `super_admin`
+- "Admin" → `admin`
+- "Moderator" → `moderator`
+- "Support" → `support`
 
 **Response:**
 ```json
@@ -218,7 +225,8 @@ curl -X POST http://localhost:3000/admin/create \
     "email": "admin@example.com",
     "password": "password123",
     "fullname": "New Admin",
-    "level": "admin",
+    "phone": "+1234567890",
+    "avatar": "https://example.com/avatar.jpg",
     "role_id": "2"
   }'
 ```
