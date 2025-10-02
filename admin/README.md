@@ -19,7 +19,7 @@ This document provides comprehensive API documentation for the Admin module, inc
 
 **Endpoint:** `POST /admin/auth/login`
 
-**Description:** Authenticate admin user with username/email and password.
+**Description:** Authenticate admin user with username and password.
 
 **Request Body:**
 ```json
@@ -243,13 +243,11 @@ curl -X POST http://localhost:3000/admin/create \
 **Request Body:**
 ```json
 {
-  "username": "updated_username",
-  "email": "updated@example.com",
   "role_id": "2"
 }
 ```
 
-**Note:** Only `username`, `email`, and `role_id` can be updated. The `role_id` is required.
+**Note:** Only `role_id` can be updated.
 
 **Response:**
 ```json
@@ -347,7 +345,6 @@ curl -X DELETE http://localhost:3000/admin/1 \
       "status": "active",
       "created_at": "2025-01-10T10:30:00.000Z",
       "updated_at": "2025-01-10T10:30:00.000Z",
-      "permissions": []
     },
     {
       "id": 2,
@@ -356,7 +353,6 @@ curl -X DELETE http://localhost:3000/admin/1 \
       "status": "active",
       "created_at": "2025-01-10T10:30:00.000Z",
       "updated_at": "2025-01-10T10:30:00.000Z",
-      "permissions": []
     }
   ],
   "total": 2
