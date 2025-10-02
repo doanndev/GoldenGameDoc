@@ -467,7 +467,7 @@ const { ... } = useGameRoomsSocket({
 
 ## React Hook
 
-```
+```typescript
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { io, Socket } from 'socket.io-client'
 
