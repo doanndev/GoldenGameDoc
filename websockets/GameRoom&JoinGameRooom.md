@@ -613,6 +613,15 @@ export function useGameRoomsSocket(options: UseGameRoomsSocketOptions = {}) {
 
   const apiBase = useMemo(() => process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '') || '', [])
   console.log('apiBase', apiBase)
+  
+  // Convert HTTPS to WSS for WebSocket connection
+  const wsBase = useMemo(() => {
+    if (!apiBase) return ''
+    // Replace https:// with wss:// for secure WebSocket connection
+    return apiBase.replace(/^https?:\/\//, 'wss://')
+  }, [apiBase])
+  
+  console.log('wsBase', wsBase)
 
   const log = useCallback((msg: string, isError = false) => {
     if (!enableLogs) return
@@ -623,8 +632,15 @@ export function useGameRoomsSocket(options: UseGameRoomsSocketOptions = {}) {
 
   const connect = useCallback(() => {
     if (socketRef.current?.connected) return
-    // Sử dụng URL trực tiếp như đã test thành công
-    const url = 'ws://8w7n4n91-8008.asse.devtunnels.ms/game-rooms'
+    
+    if (!wsBase) {
+      log('No WebSocket base URL configured', true)
+      setError('WebSocket URL not configured')
+      return
+    }
+    
+    // Sử dụng wsBase (đã convert từ https:// sang wss://)
+    const url = `${wsBase}/game-rooms`
     log(`Connecting to ${url}`)
     const socket = io(url, {
       transports: ['websocket', 'polling'],
@@ -742,7 +758,7 @@ export function useGameRoomsSocket(options: UseGameRoomsSocketOptions = {}) {
       console.log(`🎯 Received event '${eventName}':`, args)
     })
 
-  }, [apiBase, log])
+  }, [wsBase, log])
 
   const disconnect = useCallback(() => {
     if (!socketRef.current) return
