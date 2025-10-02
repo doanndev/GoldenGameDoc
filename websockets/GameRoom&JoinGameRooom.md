@@ -913,3 +913,475 @@ export type {
 }
 
 ```
+
+## Sử dụng React Hook trong component
+
+```typescript
+'use client'
+
+import React, { useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { useQuery } from '@tanstack/react-query'
+import RoomGames from '@/components/Games/RoomGames'
+import { gameService } from '@/services/api/GameService'
+import { queryKeys } from '@/services/api/queryKeys'
+import { useAuth, useGameRoomsSocket } from '@/hooks'
+import { getProfile } from '@/services/api/AuthService'
+
+const AllRoomsPage = () => {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const gameType = searchParams.get('game') || 'lottery' // Default to lottery
+  
+  const [dimensions, setDimensions] = useState({ width: '375.348px', height: '374.113px', borderRadius: '375.348px' })
+
+  // Fetch game lists to get game type IDs
+  const { data: gameLists } = useQuery({
+    queryKey: queryKeys.gameLists.active,
+    queryFn: () => gameService.getActiveGameLists(),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
+  })
+
+  // Map game names to gameTypeId for RoomGames component
+  const getGameTypeId = (name: string): 'lottery' | 'rock-paper-scissors' => {
+    switch (name.toLowerCase()) {
+      case 'xổ số blockchain':
+      case 'lottery':
+        return 'lottery'
+      case 'kéo búa bao':
+      case 'rock-paper-scissors':
+      case 'rps':
+        return 'rock-paper-scissors'
+      default:
+        return 'lottery' // Default fallback
+    }
+  }
+
+  // Find game type DB ID based on game type
+  const getGameTypeDbId = (gameType: string): number | undefined => {
+    if (!gameLists?.data) return undefined
+    
+    const game = gameLists.data.find(g => {
+      const mappedType = getGameTypeId(g.name)
+      return mappedType === gameType
+    })
+    
+    return game?.id
+  }
+
+  useEffect(() => {
+    const updateDimensions = () => {
+      if (window.innerWidth < 640) {
+        setDimensions({ width: '200px', height: '200px', borderRadius: '200px' })
+      } else if (window.innerWidth < 768) {
+        setDimensions({ width: '300px', height: '300px', borderRadius: '300px' })
+      } else {
+        setDimensions({ width: '375.348px', height: '374.113px', borderRadius: '375.348px' })
+      }
+    }
+
+    updateDimensions()
+    window.addEventListener('resize', updateDimensions)
+    return () => window.removeEventListener('resize', updateDimensions)
+  }, [])
+
+  const renderGameComponent = () => {
+    const gameTypeDbId = getGameTypeDbId(gameType)
+    
+    switch (gameType) {
+      case 'lottery':
+        return <RoomGames gameTypeId="lottery" gameTypeDbId={gameTypeDbId} showAll={true} showHeader={false} />
+      case 'rock-paper-scissors':
+        return <RoomGames gameTypeId="rock-paper-scissors" gameTypeDbId={gameTypeDbId} showAll={true} showHeader={false} />
+      default:
+        return <RoomGames gameTypeId="lottery" gameTypeDbId={gameTypeDbId} showAll={true} showHeader={false} />
+    }
+  }
+
+  const {
+    isConnected, 
+    roomCounts, 
+    sessionUserCount, 
+    error,
+    subscribeRoomCounts, 
+    retrySubscribeRoomCounts, 
+    getLatestSessionByRoom,
+    getLatestSessionWithDetails,
+    getAllSessionsByRoom,
+    getCurrentActiveSession,
+    subscribeCurrentActiveSession,
+    unsubscribeCurrentActiveSession,
+    // Session data states
+    latestSession,
+    sessionWithDetails,
+    allSessions,
+    currentActiveSession,
+    // Participant management
+    subscribeRoomParticipants,
+    unsubscribeRoomParticipants,
+    getRoomParticipants,
+    subscribeSessionParticipants,
+    unsubscribeSessionParticipants,
+    getSessionParticipants,
+    // Participant data states
+    roomParticipantData,
+    participantCountData,
+    sessionStatusData
+  } = useGameRoomsSocket({autoConnect: true, enableLogs: true})
+  const {isAuthenticated} = useAuth()
+
+  // Get user profile
+  const { data: profile } = useQuery({
+    queryKey: queryKeys.auth.profile,
+    queryFn: getProfile,
+    enabled: isAuthenticated,
+    retry: false,
+    refetchOnWindowFocus: false,
+  })
+
+  useEffect(() => {
+    if (isConnected && isAuthenticated) {
+      console.log('✅ Connected and authenticated, subscribing to room counts')
+      subscribeRoomCounts()
+    }
+  }, [isConnected, isAuthenticated, subscribeRoomCounts])
+
+  // Handle error and retry
+  useEffect(() => {
+    if (error && error.includes('Failed to subscribe to room counts')) {
+      console.log('🔄 Subscription failed, retrying in 3 seconds...')
+      setTimeout(() => {
+        retrySubscribeRoomCounts()
+      }, 3000)
+    }
+  }, [error, retrySubscribeRoomCounts])
+
+  // Debug logs để kiểm tra trạng thái
+  useEffect(() => {
+    console.log('🔍 Debug Info:', {
+      isConnected,
+      isAuthenticated,
+      profile: profile,
+      roomCounts,
+      sessionUserCount
+    })
+  }, [isConnected, isAuthenticated, profile, roomCounts, sessionUserCount])
+
+  // Sử dụng dữ liệu room counts
+  useEffect(() => {
+    if (roomCounts) {
+      console.log('✅ Room counts updated:', roomCounts)
+      console.log('✅ Session user count:', sessionUserCount)
+      // Cập nhật UI với dữ liệu mới
+    }
+  }, [roomCounts, sessionUserCount]) 
+
+  // Subscribe to current active session for real-time updates
+  useEffect(() => {
+    if (isConnected) {
+      console.log('🔌 Connected, subscribing to current active session for room 172');
+      subscribeCurrentActiveSession(172);
+      
+      // Subscribe to room participants for real-time updates
+      console.log('👥 Subscribing to room participants for room 172');
+      subscribeRoomParticipants(172);
+      
+      // Also get latest session with details
+      // getLatestSessionByRoom(172);
+    }
+    
+    return () => {
+      if (isConnected) {
+        unsubscribeCurrentActiveSession(172);
+        unsubscribeRoomParticipants(172);
+      }
+    };
+  }, [isConnected, subscribeCurrentActiveSession, unsubscribeCurrentActiveSession, subscribeRoomParticipants, unsubscribeRoomParticipants, getLatestSessionByRoom]);
+
+  // Debug latestSession khi có thay đổi
+  useEffect(() => {
+    console.log('📊 Latest session updated:', latestSession);
+  }, [latestSession]);
+
+  // Debug tất cả session states
+  useEffect(() => {
+    console.log('🔍 All session states:', {
+      latestSession,
+      sessionWithDetails,
+      allSessions,
+      currentActiveSession,
+      isConnected
+    });
+  }, [latestSession, sessionWithDetails, allSessions, currentActiveSession, isConnected]);
+
+  // Debug participant data
+  useEffect(() => {
+    console.log('👥 Participant data updated:', {
+      roomParticipantData,
+      participantCountData,
+      sessionStatusData
+    });
+  }, [roomParticipantData, participantCountData, sessionStatusData]);
+
+  // Test WebSocket connection
+  useEffect(() => {
+    if (isConnected) {
+      console.log('🔌 WebSocket connected, testing events...');
+      
+      // Test emit một event đơn giản
+      const socket = (window as any).io?.('ws://8w7n4n91-8008.asse.devtunnels.ms/game-rooms');
+      if (socket) {
+        socket.emit('test', { message: 'Hello from frontend' });
+        console.log('📡 Emitted test event');
+      }
+    }
+  }, [isConnected]); 
+
+  return (
+    <div className='bg-bg-game bg-cover bg-center bg-no-repeat bg-fixed w-screen bg-[#090B10]'>
+      {/* <div 
+        className="absolute top-52"
+        style={{
+          width: dimensions.width,
+          height: dimensions.height,
+          transform: 'rotate(90deg)',
+          flexShrink: 0,
+          borderRadius: dimensions.borderRadius,
+          background: 'rgba(0, 144, 255, 0.34)',
+          filter: 'blur(131.85223388671875px)'
+        }}
+      /> */}
+      <div className='container-custom p-[30px] relative z-10 max-h-[calc(100vh-73px)]'>
+        {/* Session Data Display */}
+        <div className="mb-4 p-4 bg-gray-800 rounded-lg text-white">
+          <h3 className="text-lg font-semibold mb-4">Session Data (WebSocket)</h3>
+          
+          {/* Connection Status */}
+          <div className="mb-4">
+            <div className="flex items-center gap-2">
+              <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
+              <span className="text-sm">
+                {isConnected ? 'Connected' : 'Disconnected'}
+              </span>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="mb-4 grid grid-cols-2 gap-2">
+            <button
+              onClick={() => getLatestSessionByRoom(177)}
+              disabled={!isConnected}
+              className="px-3 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 disabled:opacity-50"
+            >
+              Get Latest Session
+            </button>
+            
+            <button
+              onClick={() => getLatestSessionWithDetails(177)}
+              disabled={!isConnected}
+              className="px-3 py-2 bg-green-600 text-white rounded text-sm hover:bg-green-700 disabled:opacity-50"
+            >
+              Get Session Details
+            </button>
+            
+            <button
+              onClick={() => getAllSessionsByRoom(177, 5)}
+              disabled={!isConnected}
+              className="px-3 py-2 bg-purple-600 text-white rounded text-sm hover:bg-purple-700 disabled:opacity-50"
+            >
+              Get All Sessions
+            </button>
+            
+            <button
+              onClick={() => getCurrentActiveSession(177)}
+              disabled={!isConnected}
+              className="px-3 py-2 bg-orange-600 text-white rounded text-sm hover:bg-orange-700 disabled:opacity-50"
+            >
+              Get Active Session
+            </button>
+            
+            <button
+              onClick={() => subscribeCurrentActiveSession(177)}
+              disabled={!isConnected}
+              className="px-3 py-2 bg-cyan-600 text-white rounded text-sm hover:bg-cyan-700 disabled:opacity-50"
+            >
+              Subscribe Active Session
+            </button>
+            
+            <button
+              onClick={() => unsubscribeCurrentActiveSession(177)}
+              disabled={!isConnected}
+              className="px-3 py-2 bg-gray-600 text-white rounded text-sm hover:bg-gray-700 disabled:opacity-50"
+            >
+              Unsubscribe Active Session
+            </button>
+            
+            <button
+              onClick={() => subscribeRoomParticipants(172)}
+              disabled={!isConnected}
+              className="px-3 py-2 bg-pink-600 text-white rounded text-sm hover:bg-pink-700 disabled:opacity-50"
+            >
+              Subscribe Room Participants
+            </button>
+            
+            <button
+              onClick={() => getRoomParticipants(172)}
+              disabled={!isConnected}
+              className="px-3 py-2 bg-indigo-600 text-white rounded text-sm hover:bg-indigo-700 disabled:opacity-50"
+            >
+              Get Room Participants
+            </button>
+          </div>
+
+          {/* Latest Session */}
+          {latestSession && (
+            <div className="mb-4 p-3 bg-blue-900 rounded border-l-4 border-blue-400">
+              <h4 className="text-sm font-semibold text-blue-200 mb-2">Latest Session</h4>
+              <div className="text-xs text-blue-100 space-y-1">
+                <p>ID: {latestSession.id}</p>
+                <p>Status: {latestSession.status}</p>
+                <p>Room: {latestSession.room_id?.name}</p>
+                <p>Time Start: {new Date(latestSession.time_start).toLocaleString()}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Session With Details */}
+          {sessionWithDetails && (
+            <div className="mb-4 p-3 bg-green-900 rounded border-l-4 border-green-400">
+              <h4 className="text-sm font-semibold text-green-200 mb-2">Session With Details</h4>
+              <div className="text-xs text-green-100 space-y-1">
+                <p>Session ID: {sessionWithDetails.session?.id}</p>
+                <p>Status: {sessionWithDetails.session?.status}</p>
+                <p>Participants: {sessionWithDetails.participantCount}/{sessionWithDetails.maxParticipants}</p>
+                <p>Is Full: {sessionWithDetails.isFull ? 'Yes' : 'No'}</p>
+                <p>Can Join: {sessionWithDetails.canJoin ? 'Yes' : 'No'}</p>
+                {sessionWithDetails.participants.length > 0 && (
+                  <div className="mt-2">
+                    <p className="font-semibold">Participants:</p>
+                    {sessionWithDetails.participants.map((p) => (
+                      <div key={p.id} className="ml-2">
+                        {p.username} - {p.amount} SOL
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* All Sessions */}
+          {allSessions.length > 0 && (
+            <div className="mb-4 p-3 bg-purple-900 rounded border-l-4 border-purple-400">
+              <h4 className="text-sm font-semibold text-purple-200 mb-2">All Sessions ({allSessions.length})</h4>
+              <div className="text-xs text-purple-100 space-y-1 max-h-32 overflow-y-auto">
+                {allSessions.map((session) => (
+                  <div key={session.id} className="flex justify-between">
+                    <span>ID: {session.id}</span>
+                    <span className={`px-2 py-1 rounded text-xs ${
+                      session.status === 'PENDING' ? 'bg-yellow-600' :
+                      session.status === 'RUNNING' ? 'bg-green-600' :
+                      'bg-gray-600'
+                    }`}>
+                      {session.status}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Current Active Session */}
+          {currentActiveSession && (
+            <div className="mb-4 p-3 bg-orange-900 rounded border-l-4 border-orange-400">
+              <h4 className="text-sm font-semibold text-orange-200 mb-2">Current Active Session</h4>
+              <div className="text-xs text-orange-100 space-y-1">
+                <p>ID: {currentActiveSession.id}</p>
+                <p>Status: {currentActiveSession.status}</p>
+                <p>Room: {currentActiveSession.room_id?.name}</p>
+                <p>Time Start: {new Date(currentActiveSession.time_start).toLocaleString()}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Room Participant Data */}
+          {roomParticipantData && (
+            <div className="mb-4 p-3 bg-pink-900 rounded border-l-4 border-pink-400">
+              <h4 className="text-sm font-semibold text-pink-200 mb-2">Room Participants (Room {roomParticipantData.roomId})</h4>
+              <div className="text-xs text-pink-100 space-y-1">
+                <p>Session: {roomParticipantData.sessionId} ({roomParticipantData.sessionStatus})</p>
+                <p>Total: {roomParticipantData.totalParticipants} (Pending: {roomParticipantData.totalPending}, Executed: {roomParticipantData.totalExecuted})</p>
+                
+                {roomParticipantData.participants.executed.length > 0 && (
+                  <div className="mt-2">
+                    <p className="font-semibold">Executed Participants:</p>
+                    {roomParticipantData.participants.executed.map((p) => (
+                      <div key={p.id} className="ml-2">
+                        {p.username} - {p.amount} SOL ({p.status})
+                      </div>
+                    ))}
+                  </div>
+                )}
+                
+                {roomParticipantData.participants.pending.length > 0 && (
+                  <div className="mt-2">
+                    <p className="font-semibold">Pending Participants:</p>
+                    {roomParticipantData.participants.pending.map((p) => (
+                      <div key={p.id} className="ml-2">
+                        {p.username} - {p.amount} SOL ({p.status})
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Participant Count Data */}
+          {participantCountData && (
+            <div className="mb-4 p-3 bg-indigo-900 rounded border-l-4 border-indigo-400">
+              <h4 className="text-sm font-semibold text-indigo-200 mb-2">Participant Count Update</h4>
+              <div className="text-xs text-indigo-100 space-y-1">
+                <p>Room: {participantCountData.roomId}, Session: {participantCountData.sessionId}</p>
+                <p>Count: {participantCountData.participantCount}/{participantCountData.maxParticipants}</p>
+                <p>Is Full: {participantCountData.isFull ? 'Yes' : 'No'}</p>
+                <p>Can Join: {participantCountData.canJoin ? 'Yes' : 'No'}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Session Status Change */}
+          {sessionStatusData && (
+            <div className="mb-4 p-3 bg-yellow-900 rounded border-l-4 border-yellow-400">
+              <h4 className="text-sm font-semibold text-yellow-200 mb-2">Session Status Change</h4>
+              <div className="text-xs text-yellow-100 space-y-1">
+                <p>Room: {sessionStatusData.roomId}, Session: {sessionStatusData.sessionId}</p>
+                <p>Status: {sessionStatusData.oldStatus} → {sessionStatusData.newStatus}</p>
+                <p>Time: {new Date(sessionStatusData.timestamp).toLocaleString()}</p>
+              </div>
+            </div>
+          )}
+
+          {/* No Data Message */}
+          {!latestSession && !sessionWithDetails && allSessions.length === 0 && !currentActiveSession && !roomParticipantData && (
+            <div className="text-center text-gray-400 text-sm">
+              <p>No session data available</p>
+              <p>Click buttons above to request data via WebSocket</p>
+            </div>
+          )}
+        </div>
+
+        {/* Session Data Demo */}
+        <div className="mb-4">
+        </div>
+
+        {renderGameComponent()}
+      </div>
+    </div>
+  )
+}
+
+export default AllRoomsPage
+
+```
