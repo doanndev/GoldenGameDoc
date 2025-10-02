@@ -407,125 +407,6 @@ Tham gia vào một phòng game với session cụ thể.
 ### 2. Get Game Join Rooms
 **GET** `/game-join-rooms`
 
-Lấy danh sách các lần tham gia phòng game.
-
-#### Query Parameters
-| Parameter | Type | Required | Default | Description |
-|-----------|------|----------|---------|-------------|
-| `session_id` | number | No | - | Lọc theo session ID |
-| `room_id` | number | No | - | Lọc theo room ID |
-| `page` | number | No | 1 | Số trang |
-| `limit` | number | No | 10 | Số lượng items per page |
-
-#### Example Request
-```
-GET /game-join-rooms?session_id=1&room_id=13&page=1&limit=10
-```
-
-#### Success Response (200)
-```json
-{
-  "message": "Game join room fetched successfully",
-  "data": [
-    {
-      "id": 1,
-      "wallet_address": "0x1234567890abcdef...",
-      "amount": 100,
-      "time_join": "2024-01-01T00:00:00.000Z",
-      "status": "view",
-      "session": {
-        "id": 1,
-        "session": "1234567890",
-        "time_start": "2024-01-01T00:03:00.000Z",
-        "status": "wait"
-      },
-      "room": {
-        "id": 13,
-        "name": "Phòng game 003",
-        "participation_amount": 10,
-        "prizes_num": 3
-      },
-      "user": {
-        "id": 1,
-        "username": "user123"
-      }
-    }
-  ],
-  "pagination": {
-    "page": 1,
-    "limit": 10,
-    "total": 1,
-    "totalPages": 1,
-    "hasNext": false,
-    "hasPrev": false
-  }
-}
-```
-
-#### Error Responses
-| Status Code | Message | Description |
-|-------------|---------|-------------|
-| 401 | Unauthorized | Token không hợp lệ |
-| 500 | Error fetching game join rooms | Lỗi server |
-
----
-
-
-**Validation Rules**:
-- Same validation as create game room
-- **Prize Replacement**: If `game_set_prizes` is provided, ALL existing prizes will be deleted and replaced with new ones
-- **Transaction Safety**: Prize deletion and creation happens in a single transaction
-- Number of prizes must match `gr_prizes_num`
-- Total percentage must equal 100%
-
-**Response**:
-```json
-{
-  "message": "Game room updated successfully"
-}
-```
-
-**Error Responses**:
-```json
-{
-  "statusCode": 400,
-  "message": "Game room prizes number must be equal to the number of prizes"
-}
-```
-
----
-
-### 7. Check New Session Availability
-**GET** `/game-join-rooms/check-new-session`
-
-Kiểm tra session mới đã được tạo và sẵn sàng join chưa.
-
-#### Query Parameters
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `room_id` | number | Yes | ID của phòng game |
-
-#### Example Request
-```
-GET /game-join-rooms/check-new-session?room_id=1
-```
-
-#### Success Response (200)
-```json
-{
-  "message": "New session is available",
-  "data": {
-    "room_id": 1,
-    "latest_session_id": 2,
-    "session_status": "pending",
-    "session_available": true,
-    "can_join": true,
-    "session_start_time": "2024-01-01T12:05:00.000Z",
-    "message": "You can join the new session now"
-  }
-}
-```
-
 ```
 GET /game-join-rooms/by-room?room_id=<:id>&session_id=<:id>
 ```
@@ -570,6 +451,40 @@ GET /game-join-rooms/by-room?room_id=<:id>&session_id=<:id>
 }
 ```
 
+Lấy danh sách các lần tham gia phòng game.
+
+---
+
+### 7. Check New Session Availability
+**GET** `/game-join-rooms/check-new-session`
+
+Kiểm tra session mới đã được tạo và sẵn sàng join chưa.
+
+#### Query Parameters
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `room_id` | number | Yes | ID của phòng game |
+
+#### Example Request
+```
+GET /game-join-rooms/check-new-session?room_id=1
+```
+
+#### Success Response (200)
+```json
+{
+  "message": "New session is available",
+  "data": {
+    "room_id": 1,
+    "latest_session_id": 2,
+    "session_status": "pending",
+    "session_available": true,
+    "can_join": true,
+    "session_start_time": "2024-01-01T12:05:00.000Z",
+    "message": "You can join the new session now"
+  }
+}
+```
 #### Response Fields
 | Field | Type | Description |
 |-------|------|-------------|
