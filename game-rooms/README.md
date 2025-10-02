@@ -188,7 +188,9 @@ GET /
 - `room_id` (number, optional): Filter by game room id
 - `host_id` (number, optional): Filter by game room owner id
 - `game_type_id` (number, optional): Filter by game room game type id
-- `host`  (string, optional): Filter by gmae room host
+- `host`  (string, optional): Filter by username owner
+- `name`  (string, optional): Filter by name game room
+- `status`  (string, optional): Filter by status của game session
 
 **Response**:
 ```json
