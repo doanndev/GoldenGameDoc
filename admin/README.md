@@ -231,6 +231,102 @@ curl -X POST http://localhost:3000/admin/create \
 
 ---
 
+---
+
+### 3. Update Admin
+
+**Endpoint:** `PATCH /admin/:id`
+
+**Description:** Update admin account information (Super Admin only).
+
+
+**Request Body:**
+```json
+{
+  "username": "updated_username",
+  "email": "updated@example.com",
+  "role_id": "2"
+}
+```
+
+**Note:** Only `username`, `email`, and `role_id` can be updated. The `role_id` is required.
+
+**Response:**
+```json
+{
+  "message": "Admin updated successfully",
+  "admin": {
+    "id": 1,
+    "username": "updated_username",
+    "email": "updated@example.com",
+    "fullname": "Admin User",
+    "avatar": null,
+    "phone": null,
+    "level": "admin",
+    "role": {
+      "id": 2,
+      "name": "Admin",
+      "description": "General admin with most permissions"
+    },
+    "last_login": "2025-01-10T10:30:00.000Z",
+    "last_ip": "127.0.0.1",
+    "status": "active",
+    "two_factor_enabled": false
+  }
+}
+```
+
+**cURL Example:**
+```bash
+curl -X PATCH http://localhost:3000/admin/1 \
+  -H "Authorization: Bearer <admin_jwt_token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "updated_username",
+    "email": "updated@example.com",
+    "role_id": "2"
+  }'
+```
+
+---
+
+### 4. Delete Admin
+
+**Endpoint:** `DELETE /admin/:id`
+
+**Description:** Delete (deactivate) admin account (Super Admin only).
+
+**Request Body:**
+```json
+{
+  "reason": "Account no longer needed"
+}
+```
+
+**Note:** The `reason` field is optional. Admin is deactivated (status = inactive) rather than permanently deleted.
+
+**Response:**
+```json
+{
+  "message": "Admin deactivated successfully",
+  "admin_id": 1,
+  "action": "delete",
+  "timestamp": "2025-01-10T10:30:00.000Z"
+}
+```
+
+**cURL Example:**
+```bash
+curl -X DELETE http://localhost:3000/admin/1 \
+  -H "Authorization: Bearer <admin_jwt_token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "reason": "Account no longer needed"
+  }'
+```
+
+---
+
 ## Role Management APIs
 
 ### 1. Get All Roles
