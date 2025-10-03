@@ -25,7 +25,7 @@ This document provides comprehensive API documentation for the Admin module, inc
 ```json
 {
   "username": "superadmin",
-  "password": "1234"
+  "password": "123456"
 }
 ```
 
@@ -662,7 +662,7 @@ curl -X GET "http://localhost:3000/admin/permissions?resource=users" \
 ```bash
 curl -X POST http://localhost:3000/admin/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"username": "superadmin", "password": "1234"}' \
+  -d '{"username": "superadmin", "password": "123456"}' \
   -c cookies.txt
 ```
 
