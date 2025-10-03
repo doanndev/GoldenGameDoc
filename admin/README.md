@@ -92,7 +92,7 @@ curl -X GET http://localhost:3000/admin/auth/me \
 
 **Description:** Logout current admin and clear session.
 
-**Headers:** `Authorization: Bearer <admin_jwt_token>` or Cookie: `admin_access_token`
+  or Cookie: `admin_access_token`
 
 **Response:**
 ```json
@@ -141,9 +141,9 @@ curl -X POST http://localhost:3000/admin/auth/refresh \
 
 **Endpoint:** `GET /admin/list`
 
-**Description:** Get all admin accounts with basic information.
+**Description:** Get all admin accounts with basic information. Requires `ADMINS.READ` permission.
 
-**Headers:** `Authorization: Bearer <admin_jwt_token>`
+ 
 
 **Response:**
 ```json
@@ -186,8 +186,9 @@ curl -X GET http://localhost:3000/admin/list \
 
 **Endpoint:** `POST /admin/create`
 
-**Description:** Create a new admin account (Super Admin only).
+**Description:** Create a new admin account. Requires `ADMINS.CREATE` permission.
 
+ 
 
 **Request Body:**
 ```json
@@ -196,15 +197,15 @@ curl -X GET http://localhost:3000/admin/list \
   "email": "admin@example.com",
   "password": "password123",
   "fullname": "New Admin",
-  "role_id": "2"
+  "level": "admin"
 }
 ```
 
-**Note:** The `level` field is automatically determined from the selected `role_id`. The system maps role names to admin levels:
-- "Super Admin" → `super_admin`
-- "Admin" → `admin`
-- "Moderator" → `moderator`
-- "Support" → `support`
+**Note:** The `level` field determines the admin's role. Valid levels:
+- `super_admin` → Super Admin role
+- `admin` → Admin role
+- `moderator` → Moderator role
+- `support` → Support role
 
 **Response:**
 ```json
@@ -225,7 +226,7 @@ curl -X POST http://localhost:3000/admin/create \
     "fullname": "New Admin",
     "phone": "+1234567890",
     "avatar": "https://example.com/avatar.jpg",
-    "role_id": "2"
+    "level": "admin"
   }'
 ```
 
@@ -237,8 +238,9 @@ curl -X POST http://localhost:3000/admin/create \
 
 **Endpoint:** `PATCH /admin/:id`
 
-**Description:** Update admin account information (Super Admin only).
+**Description:** Update admin account information. Requires `ADMINS.UPDATE` permission.
 
+ 
 
 **Request Body:**
 ```json
@@ -247,7 +249,7 @@ curl -X POST http://localhost:3000/admin/create \
 }
 ```
 
-**Note:** Only `role_id` can be updated.
+**Note:** Only `role_id` can be updated. The admin's level will be automatically determined from the new role.
 
 **Response:**
 ```json
@@ -280,8 +282,6 @@ curl -X PATCH http://localhost:3000/admin/1 \
   -H "Authorization: Bearer <admin_jwt_token>" \
   -H "Content-Type: application/json" \
   -d '{
-    "username": "updated_username",
-    "email": "updated@example.com",
     "role_id": "2"
   }'
 ```
@@ -292,7 +292,9 @@ curl -X PATCH http://localhost:3000/admin/1 \
 
 **Endpoint:** `DELETE /admin/:id`
 
-**Description:** Delete (deactivate) admin account (Super Admin only).
+**Description:** Delete (deactivate) admin account. Requires `ADMINS.DELETE` permission.
+
+ 
 
 **Request Body:**
 ```json
@@ -331,8 +333,9 @@ curl -X DELETE http://localhost:3000/admin/1 \
 
 **Endpoint:** `GET /admin/roles`
 
-**Description:** Get all available roles (permissions details only available in get role by ID).
+**Description:** Get all available roles (permissions details only available in get role by ID). Requires `SYSTEM.VIEW` permission.
 
+ 
 
 **Response:**
 ```json
@@ -371,8 +374,9 @@ curl -X GET http://localhost:3000/admin/roles \
 
 **Endpoint:** `GET /admin/roles/:id`
 
-**Description:** Get specific role with its permissions.
+**Description:** Get specific role with its permissions. Requires `SYSTEM.VIEW` permission.
 
+ 
 
 **Response:**
 ```json
@@ -410,8 +414,9 @@ curl -X GET http://localhost:3000/admin/roles/1 \
 
 **Endpoint:** `POST /admin/roles`
 
-**Description:** Create a new custom role with selected permissions (Super Admin only).
+**Description:** Create a new custom role with selected permissions. Requires `SYSTEM.MANAGE` permission.
 
+ 
 
 **Request Body:**
 ```json
@@ -468,7 +473,9 @@ curl -X POST http://localhost:3000/admin/roles \
 
 **Endpoint:** `PATCH /admin/roles/:id`
 
-**Description:** Update existing role and its permissions (Super Admin only).
+**Description:** Update existing role and its permissions. Requires `SYSTEM.MANAGE` permission.
+
+ 
 
 **Request Body:**
 ```json
@@ -513,7 +520,9 @@ curl -X PATCH http://localhost:3000/admin/roles/5 \
 
 **Endpoint:** `DELETE /admin/roles/:id`
 
-**Description:** Delete role (Super Admin only).
+**Description:** Delete role. Requires `SYSTEM.MANAGE` permission.
+
+ 
 
 **Response:**
 ```json
@@ -537,8 +546,9 @@ curl -X DELETE http://localhost:3000/admin/roles/5 \
 
 **Endpoint:** `GET /admin/permissions`
 
-**Description:** Get all available permissions.
+**Description:** Get all available permissions. Requires `SYSTEM.VIEW` permission.
 
+ 
 
 **Query Parameters:**
 - `resource` (optional): Filter permissions by resource (e.g., "users", "admins", "transactions")
@@ -618,12 +628,18 @@ curl -X GET "http://localhost:3000/admin/permissions?resource=users" \
 }
 ```
 
-**Forbidden:**
+**Forbidden (Permission Denied):**
 ```json
 {
+  "success": false,
   "statusCode": 403,
-  "message": "Only Super Admin can create new admin accounts",
-  "error": "Forbidden"
+  "message": "Access denied",
+  "error": "Forbidden",
+  "details": {
+    "reason": "Insufficient permissions",
+    "required": "create on admins",
+    "timestamp": "2025-01-15T10:30:00.000Z"
+  }
 }
 ```
 
@@ -691,8 +707,7 @@ curl -X POST http://localhost:3000/admin/create \
     "email": "test@example.com",
     "password": "password123",
     "fullname": "Test Admin",
-    "level": "admin",
-    "role_id": "5"
+    "level": "admin"
   }'
 ```
 
@@ -729,11 +744,42 @@ After server initialization, you can use these credentials to test:
 
 ---
 
+## Permission System
+
+The admin module uses a comprehensive permission system based on `resource` and `action`:
+
+### Permission Structure
+- **Resources:** `ADMINS`, `USERS`, `TRANSACTIONS`, `WALLETS`, `SYSTEM`, `REPORTS`, etc.
+- **Actions:** `CREATE`, `READ`, `UPDATE`, `DELETE`, `MANAGE`, `VIEW`, etc.
+
+### Required Permissions by Endpoint
+
+| Endpoint | Method | Required Permission |
+|----------|--------|-------------------|
+| `/admin/create` | POST | `ADMINS.CREATE` |
+| `/admin/list` | GET | `ADMINS.READ` |
+| `/admin/:id` | PATCH | `ADMINS.UPDATE` |
+| `/admin/:id` | DELETE | `ADMINS.DELETE` |
+| `/admin/roles` | GET | `SYSTEM.VIEW` |
+| `/admin/roles/:id` | GET | `SYSTEM.VIEW` |
+| `/admin/roles` | POST | `SYSTEM.MANAGE` |
+| `/admin/roles/:id` | PATCH | `SYSTEM.MANAGE` |
+| `/admin/roles/:id` | DELETE | `SYSTEM.MANAGE` |
+| `/admin/permissions` | GET | `SYSTEM.VIEW` |
+
+### Permission Levels
+- **Super Admin:** Has all permissions automatically
+- **Admin:** Most permissions except super admin specific functions
+- **Moderator:** User management and basic permissions
+- **Support:** Basic read permissions only
+
+---
+
 ## Notes
 
 1. **Authentication:** All endpoints except login require valid JWT token in Authorization header or admin_access_token cookie.
 
-2. **Permissions:** Role management operations require Super Admin level.
+2. **Permissions:** All endpoints now use permission-based access control instead of role-level restrictions.
 
 3. **Validation:** All input data is validated according to DTO specifications.
 
@@ -742,6 +788,8 @@ After server initialization, you can use these credentials to test:
 5. **Email Notifications:** New admin accounts receive email notifications with login credentials.
 
 6. **Role Safety:** Cannot delete roles that are being used by existing admins.
+
+7. **Level-based Admin Creation:** Use `level` field instead of `role_id` when creating new admins.
 
 ---
 
