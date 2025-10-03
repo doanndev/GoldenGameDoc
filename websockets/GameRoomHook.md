@@ -1179,4 +1179,3 @@ useEffect(() => {
 - **Event-driven**: Uses `GameRoom.sessionStatusChanged` internal event
 - **Broadcast**: All connected clients receive updates via `gameRoomCounts` event
 - **No polling**: No need to manually refresh data
-
