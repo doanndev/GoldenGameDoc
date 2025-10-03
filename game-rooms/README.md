@@ -20,6 +20,27 @@ yarn add socket.io-client
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
 
+// Constants (matching server-side enums)
+export const GAME_ROOM_STATUS = {
+  PENDING: 'pending',
+  RUNNING: 'running',
+  OUT: 'out',
+  END: 'end',
+  DELETE: 'delete',
+} as const;
+
+export const GAME_SESSION_STATUS = {
+  PENDING: 'pending',
+  RUNNING: 'running',
+  OUT: 'out',
+  END: 'end',
+} as const;
+
+export const GAME_JOIN_ROOM_STATUS = {
+  EXECUTED: 'executed',
+  VIEW: 'view',
+} as const;
+
 // Types
 export interface GameRoomCounts {
   pending: number;
@@ -117,8 +138,8 @@ export interface UseGameRoomWebSocketReturn {
   getEarlyJoinersList: (payload: { roomId: number; sessionId?: number }) => void;
   
   // Room joining
-  joinRoom: (payload: { roomId: number }) => Promise<JoinRoomResult | null>;
-  joinRoomWithEarlyJoiners: (payload: { roomId: number }) => Promise<JoinRoomResult | null>;
+  joinRoom: (payload: { roomId: number; amount: number }) => Promise<JoinRoomResult | null>;
+  joinRoomWithEarlyJoiners: (payload: { roomId: number; amount: number }) => Promise<JoinRoomResult | null>;
   
   // Connection management
   connect: () => void;
@@ -346,7 +367,7 @@ export const useGameRoomWebSocket = (
   }, []);
 
   // Join room
-  const joinRoom = useCallback(async (payload: { roomId: number }): Promise<JoinRoomResult | null> => {
+  const joinRoom = useCallback(async (payload: { roomId: number; amount: number }): Promise<JoinRoomResult | null> => {
     if (!socketRef.current?.connected) {
       console.warn('⚠️ WebSocket not connected, cannot join room');
       return null;
@@ -369,7 +390,7 @@ export const useGameRoomWebSocket = (
   }, []);
 
   // Join room with early joiners
-  const joinRoomWithEarlyJoiners = useCallback(async (payload: { roomId: number }): Promise<JoinRoomResult | null> => {
+  const joinRoomWithEarlyJoiners = useCallback(async (payload: { roomId: number; amount: number }): Promise<JoinRoomResult | null> => {
     if (!socketRef.current?.connected) {
       console.warn('⚠️ WebSocket not connected, cannot join room');
       return null;
@@ -497,7 +518,7 @@ const GameRoomComponent: React.FC = () => {
 
   const handleJoinRoom = async () => {
     try {
-      const result = await joinRoom({ roomId: 123 });
+      const result = await joinRoom({ roomId: 123, amount: 100 });
       if (result?.success) {
         console.log('Successfully joined room:', result);
       } else {
@@ -510,7 +531,7 @@ const GameRoomComponent: React.FC = () => {
 
   const handleJoinRoomWithEarlyJoiners = async () => {
     try {
-      const result = await joinRoomWithEarlyJoiners({ roomId: 123 });
+      const result = await joinRoomWithEarlyJoiners({ roomId: 123, amount: 100 });
       if (result?.success) {
         console.log('Successfully joined room with early joiners:', result);
       } else {
@@ -668,7 +689,7 @@ const GameRoomsPage: React.FC = () => {
 
   const handleJoinRoom = async (roomId: number) => {
     try {
-      const result = await joinRoom({ roomId });
+      const result = await joinRoom({ roomId, amount: 100 });
       if (result?.success) {
         alert(`Successfully joined room ${roomId}`);
         setSelectedRoomId(roomId);
@@ -791,6 +812,50 @@ Add these to your `.env.local` file:
 NEXT_PUBLIC_WEBSOCKET_URL=http://localhost:8008
 ```
 
+## Validation & Error Handling
+
+### Server-side Validations
+
+The WebSocket gateway performs comprehensive validations:
+
+1. **Authentication**
+   - JWT token validation from cookies
+   - User existence check
+   - Wallet connection verification
+
+2. **Input Validation**
+   - `roomId` must be a valid number
+   - `amount` must be a valid number
+   - `gt_id` must be a valid game type ID
+
+3. **Business Logic Validation**
+   - Room exists and is RUNNING
+   - Session exists and is PENDING
+   - User hasn't already joined
+   - Room has available capacity
+   - Wallet has sufficient MPB balance
+   - Wallet has MPB (not just USDT)
+
+4. **Time-based Logic**
+   - Within 3 minutes: Status = EXECUTED (actual participation)
+   - After 3 minutes: Status = VIEW (spectator only)
+
+### Error Messages
+
+Common error responses from server:
+
+- `"Unauthorized"` - User not authenticated
+- `"User not found"` - User doesn't exist in database
+- `"Invalid roomId"` - Invalid room ID provided
+- `"Invalid amount"` - Invalid amount provided
+- `"Wallet not connected"` - Wallet address not valid
+- `"Room not found or inactive"` - Room doesn't exist or not RUNNING
+- `"No joinable session"` - No PENDING session available
+- `"Already joined"` - User already joined this session
+- `"Room full"` - Room has reached maximum capacity
+- `"Wallet balance not enough"` - Insufficient MPB balance
+- `"Wallet balance has only USDT. You need to deposit MPB to join the room"` - No MPB balance
+
 ## Features
 
 ### ✅ Implemented Features
@@ -817,15 +882,17 @@ NEXT_PUBLIC_WEBSOCKET_URL=http://localhost:8008
    - Participant information
 
 5. **Room Joining**
-   - Join room functionality
-   - Join room with early joiners
+   - Join room functionality with amount
+   - Join room with early joiners and amount
    - Promise-based API for async operations
    - Timeout handling
+   - Comprehensive validation
 
 6. **Error Handling**
    - Comprehensive error states
    - Error clearing functionality
    - Connection error handling
+   - Server validation error handling
 
 ### 🔧 Configuration Options
 
@@ -838,24 +905,53 @@ NEXT_PUBLIC_WEBSOCKET_URL=http://localhost:8008
 ### 📡 WebSocket Events Handled
 
 **Client → Server:**
-- `subscribeRoomCountByGameType`
-- `subscribeCurrentSession`
-- `getEarlyJoinersList`
-- `gameJoinRoom`
-- `joinRoomWithEarlyJoiners`
+- `subscribeRoomCountByGameType(gt_id: number)` - Subscribe to room counts by game type
+- `subscribeCurrentSession(roomId: number)` - Subscribe to current session for a room
+- `getEarlyJoinersList({ roomId: number, sessionId?: number })` - Get early joiners list
+- `gameJoinRoom({ roomId: number, amount: number })` - Join room with amount
+- `joinRoomWithEarlyJoiners({ roomId: number, amount: number })` - Join room with early joiners and amount
 
 **Server → Client:**
-- `connected`
-- `gameRoomCounts`
-- `currentSession`
-- `currentSessionUpdated`
-- `earlyJoinersList`
-- `earlyJoinersListResult`
-- `roomEarlyJoinersUpdated`
-- `gameJoinRoomResult`
-- `joinRoomWithEarlyJoinersResult`
-- `gameJoinRoomUpdated`
-- `error`
+- `connected` - Connection established with user info
+- `gameRoomCounts` - Room counts data
+- `currentSession` - Current session snapshot
+- `currentSessionUpdated` - Session status changed
+- `earlyJoinersList` - Early joiners list (from join room)
+- `earlyJoinersListResult` - Early joiners list (from get request)
+- `roomEarlyJoinersUpdated` - Early joiners updated (broadcast)
+- `gameJoinRoomResult` - Join room result
+- `joinRoomWithEarlyJoinersResult` - Join room with early joiners result
+- `gameJoinRoomUpdated` - Join room updated (broadcast)
+- `error` - Error occurred
+
+## Constants Usage
+
+Use the provided constants to match server-side behavior:
+
+```typescript
+import { 
+  GAME_ROOM_STATUS, 
+  GAME_SESSION_STATUS, 
+  GAME_JOIN_ROOM_STATUS 
+} from '../hooks/useGameRoomWebSocket';
+
+// Check room status
+if (room.status === GAME_ROOM_STATUS.RUNNING) {
+  // Room is active
+}
+
+// Check session status
+if (session.status === GAME_SESSION_STATUS.PENDING) {
+  // Session is waiting for participants
+}
+
+// Check join status
+if (joinStatus === GAME_JOIN_ROOM_STATUS.EXECUTED) {
+  // User is actually participating
+} else if (joinStatus === GAME_JOIN_ROOM_STATUS.VIEW) {
+  // User is only spectating
+}
+```
 
 ## TypeScript Support
 
@@ -877,3 +973,76 @@ The hook provides comprehensive error handling for:
 - Promise-based async operations
 - Timeout handling for operations
 - Memory leak prevention
+
+## Troubleshooting
+
+### Common Issues
+
+1. **"Unauthorized" Error**
+   - Ensure JWT token is present in cookies
+   - Check if token is valid and not expired
+   - Verify user exists in database
+
+2. **"Wallet not connected" Error**
+   - Ensure wallet address is valid Solana public key
+   - Check if wallet is properly connected
+
+3. **"Room not found or inactive" Error**
+   - Verify room ID exists
+   - Check if room status is RUNNING
+
+4. **"No joinable session" Error**
+   - Check if there's a PENDING session for the room
+   - Verify session hasn't expired
+
+5. **"Already joined" Error**
+   - User has already joined this session
+   - Check existing joins in database
+
+6. **"Room full" Error**
+   - Room has reached maximum participants
+   - Check room capacity vs current joins
+
+7. **"Wallet balance not enough" Error**
+   - User doesn't have sufficient MPB balance
+   - Check wallet balance before joining
+
+8. **"Wallet balance has only USDT" Error**
+   - User needs to deposit MPB tokens
+   - USDT alone is not sufficient for participation
+
+### Debug Tips
+
+1. **Enable Console Logging**
+   ```typescript
+   const { joinRoom } = useGameRoomWebSocket({
+     onError: (error) => console.error('WebSocket Error:', error),
+   });
+   ```
+
+2. **Check Connection State**
+   ```typescript
+   const { isConnected, connectionInfo } = useGameRoomWebSocket();
+   console.log('Connected:', isConnected, 'Info:', connectionInfo);
+   ```
+
+3. **Validate Input Data**
+   ```typescript
+   // Before joining room
+   if (!roomId || !amount || amount <= 0) {
+     console.error('Invalid input data');
+     return;
+   }
+   ```
+
+4. **Handle Promise Rejections**
+   ```typescript
+   try {
+     const result = await joinRoom({ roomId: 123, amount: 100 });
+     if (result?.error) {
+       console.error('Join failed:', result.error);
+     }
+   } catch (error) {
+     console.error('Join error:', error);
+   }
+   ```
