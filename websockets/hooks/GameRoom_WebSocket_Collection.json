@@ -1,0 +1,148 @@
+{
+  "info": {
+    "name": "Game Room WebSocket Tests",
+    "description": "Complete WebSocket testing collection for Game Room Gateway",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "WebSocket Connection",
+      "request": {
+        "url": "ws://localhost:8080/socket.io/?EIO=4&transport=websocket",
+        "method": "GET",
+        "header": [
+          {
+            "key": "Cookie",
+            "value": "refresh_token={{jwt_token}}",
+            "description": "JWT token for authentication"
+          }
+        ],
+        "description": "Connect to Game Room WebSocket Gateway"
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Set JWT token if not already set",
+              "if (!pm.environment.get('jwt_token')) {",
+              "    pm.environment.set('jwt_token', 'YOUR_JWT_TOKEN_HERE');",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Subscribe Room Counts",
+      "request": {
+        "url": "ws://localhost:8080/socket.io/?EIO=4&transport=websocket",
+        "method": "GET",
+        "header": [
+          {
+            "key": "Cookie",
+            "value": "refresh_token={{jwt_token}}"
+          }
+        ],
+        "description": "Subscribe to room counts by game type"
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Send subscribeRoomCountByGameType event",
+              "pm.sendRequest({",
+              "    url: 'ws://localhost:8080/socket.io/?EIO=4&transport=websocket',",
+              "    method: 'GET',",
+              "    header: {",
+              "        'Cookie': 'refresh_token=' + pm.environment.get('jwt_token')",
+              "    }",
+              "}, function (err, response) {",
+              "    if (err) {",
+              "        console.log('WebSocket connection error:', err);",
+              "    } else {",
+              "        console.log('WebSocket connected successfully');",
+              "        // Send subscribeRoomCountByGameType event",
+              "        // Note: This is a simplified example. In practice, you would use a WebSocket client",
+              "    }",
+              "});"
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "ws_url",
+      "value": "ws://localhost:8080/socket.io/?EIO=4&transport=websocket",
+      "type": "string"
+    },
+    {
+      "key": "jwt_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "room_id",
+      "value": "123",
+      "type": "string"
+    },
+    {
+      "key": "session_id",
+      "value": "456",
+      "type": "string"
+    },
+    {
+      "key": "game_type_id",
+      "value": "1",
+      "type": "string"
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "exec": [
+          "// Global pre-request script",
+          "console.log('Starting Game Room WebSocket Tests');",
+          "",
+          "// Set default values if not already set",
+          "if (!pm.environment.get('base_url')) {",
+          "    pm.environment.set('base_url', 'http://localhost:8080');",
+          "}",
+          "if (!pm.environment.get('ws_url')) {",
+          "    pm.environment.set('ws_url', 'ws://localhost:8080/socket.io/?EIO=4&transport=websocket');",
+          "}",
+          "if (!pm.environment.get('room_id')) {",
+          "    pm.environment.set('room_id', '123');",
+          "}",
+          "if (!pm.environment.get('session_id')) {",
+          "    pm.environment.set('session_id', '456');",
+          "}",
+          "if (!pm.environment.get('game_type_id')) {",
+          "    pm.environment.set('game_type_id', '1');",
+          "}"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "exec": [
+          "// Global test script",
+          "console.log('Test completed for:', pm.info.requestName);",
+          "",
+          "// Common test functions",
+          "pm.globals.set('test_timestamp', new Date().toISOString());"
+        ]
+      }
+    }
+  ]
+}
