@@ -10,17 +10,6 @@
 
 **Authentication:** Required (JWT Token)
 
----
-
-## 🔐 Authentication
-
-API này yêu cầu xác thực JWT token. Token phải được gửi trong header:
-
-```
-Authorization: Bearer <your_jwt_token>
-```
-
----
 
 ## 📝 Request Parameters
 
@@ -41,19 +30,16 @@ Authorization: Bearer <your_jwt_token>
 ### 1. Lấy turns mới nhất trước (mặc định)
 ```bash
 GET /rps/session/123/turns
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ```
 
 ### 2. Lấy turns từ cũ đến mới
 ```bash
 GET /rps/session/123/turns?sort=asc
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ```
 
 ### 3. Lấy turns từ mới đến cũ (explicit)
 ```bash
 GET /rps/session/123/turns?sort=desc
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ```
 
 ---
