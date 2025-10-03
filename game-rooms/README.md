@@ -1,1048 +1,713 @@
-# Game Room WebSocket React Hook
+# Game Rooms API Module
 
 ## Overview
-This document provides a comprehensive React hook for integrating with the Game Room WebSocket gateway in Next.js applications. The hook handles all WebSocket events, connection management, and provides a clean API for game room functionality.
-
-## Installation
-
-First, install the required dependencies:
-
-```bash
-npm install socket.io-client
-# or
-yarn add socket.io-client
-```
-
-## Hook Implementation
-
-```typescript
-// hooks/useGameRoomWebSocket.ts
-import { useEffect, useRef, useState, useCallback } from 'react';
-import { io, Socket } from 'socket.io-client';
-
-// Constants (matching server-side enums)
-export const GAME_ROOM_STATUS = {
-  PENDING: 'pending',
-  RUNNING: 'running',
-  OUT: 'out',
-  END: 'end',
-  DELETE: 'delete',
-} as const;
-
-export const GAME_SESSION_STATUS = {
-  PENDING: 'pending',
-  RUNNING: 'running',
-  OUT: 'out',
-  END: 'end',
-} as const;
-
-export const GAME_JOIN_ROOM_STATUS = {
-  EXECUTED: 'executed',
-  VIEW: 'view',
-} as const;
-
-// Types
-export interface GameRoomCounts {
-  pending: number;
-  running: number;
-  out: number;
-  end: number;
-  total: number;
-  lastUpdated: string;
-  error?: string;
-}
-
-export interface CurrentSession {
-  id: number;
-  status: string;
-  time_start: string;
-  session: number;
-  participants_count: number;
-  max_participants: number;
-  can_join: boolean;
-}
-
-export interface CurrentSessionSnapshot {
-  roomId: number;
-  current_session: CurrentSession | null;
-}
-
-export interface EarlyJoiner {
-  user_id: number;
-  username: string;
-  fullname: string;
-  avatar: string;
-  joined_at: string;
-  amount: number;
-  status: string;
-}
-
-export interface EarlyJoinersList {
-  roomId: number;
-  sessionId: number;
-  earlyJoiners: EarlyJoiner[];
-  totalCount: number;
-  timestamp?: string;
-}
-
-export interface JoinRoomResult {
-  success: boolean;
-  roomId: number;
-  sessionId: number;
-  joinList?: EarlyJoiner[];
-  earlyJoiners?: EarlyJoiner[];
-  totalCount?: number;
-  userJoined?: {
-    user_id: number;
-    username: string;
-    fullname: string;
-    joined_at: string;
-  };
-  timestamp?: string;
-  error?: string;
-}
-
-export interface ConnectionInfo {
-  message: string;
-  clientId: string;
-  namespace: string;
-  userId: number | null;
-}
-
-// Hook options
-export interface UseGameRoomWebSocketOptions {
-  serverUrl?: string;
-  autoConnect?: boolean;
-  onConnect?: (info: ConnectionInfo) => void;
-  onDisconnect?: () => void;
-  onError?: (error: string) => void;
-}
-
-// Hook return type
-export interface UseGameRoomWebSocketReturn {
-  // Connection state
-  isConnected: boolean;
-  isConnecting: boolean;
-  connectionInfo: ConnectionInfo | null;
-  
-  // Room counts
-  roomCounts: GameRoomCounts | null;
-  subscribeRoomCountByGameType: (gtId: number) => Promise<GameRoomCounts | null>;
-  
-  // Current session
-  currentSession: CurrentSessionSnapshot | null;
-  subscribeCurrentSession: (roomId: number) => void;
-  
-  // Early joiners
-  earlyJoiners: EarlyJoinersList | null;
-  getEarlyJoinersList: (payload: { roomId: number; sessionId?: number }) => void;
-  
-  // Room joining
-  joinRoom: (payload: { roomId: number; amount: number }) => Promise<JoinRoomResult | null>;
-  joinRoomWithEarlyJoiners: (payload: { roomId: number; amount: number }) => Promise<JoinRoomResult | null>;
-  
-  // Connection management
-  connect: () => void;
-  disconnect: () => void;
-  
-  // Error handling
-  error: string | null;
-  clearError: () => void;
-}
-
-export const useGameRoomWebSocket = (
-  options: UseGameRoomWebSocketOptions = {}
-): UseGameRoomWebSocketReturn => {
-  const {
-    serverUrl = process.env.NEXT_PUBLIC_WEBSOCKET_URL || 'http://localhost:8008',
-    autoConnect = true,
-    onConnect,
-    onDisconnect,
-    onError,
-  } = options;
-
-  // State
-  const [isConnected, setIsConnected] = useState(false);
-  const [isConnecting, setIsConnecting] = useState(false);
-  const [connectionInfo, setConnectionInfo] = useState<ConnectionInfo | null>(null);
-  const [roomCounts, setRoomCounts] = useState<GameRoomCounts | null>(null);
-  const [currentSession, setCurrentSession] = useState<CurrentSessionSnapshot | null>(null);
-  const [earlyJoiners, setEarlyJoiners] = useState<EarlyJoinersList | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  // Refs
-  const socketRef = useRef<Socket | null>(null);
-  const joinRoomPromiseRef = useRef<{
-    resolve: (value: JoinRoomResult | null) => void;
-    reject: (reason?: any) => void;
-  } | null>(null);
-
-  // Clear error helper
-  const clearError = useCallback(() => {
-    setError(null);
-  }, []);
-
-  // Connect to WebSocket
-  const connect = useCallback(() => {
-    if (socketRef.current?.connected) {
-      return;
-    }
-
-    setIsConnecting(true);
-    setError(null);
-
-    try {
-      const socket = io(`${serverUrl}/game-rooms`, {
-        transports: ['websocket', 'polling'],
-        path: '/socket.io',
-        autoConnect: false,
-      });
-
-      // Connection event handlers
-      socket.on('connect', () => {
-        console.log('🔌 Connected to game-rooms namespace:', socket.id);
-        setIsConnected(true);
-        setIsConnecting(false);
-      });
-
-      socket.on('disconnect', (reason) => {
-        console.log('🔌 Disconnected from game-rooms:', reason);
-        setIsConnected(false);
-        setIsConnecting(false);
-        onDisconnect?.();
-      });
-
-      socket.on('connected', (info: ConnectionInfo) => {
-        console.log('✅ Game room connection established:', info);
-        setConnectionInfo(info);
-        onConnect?.(info);
-      });
-
-      // Room counts events
-      socket.on('gameRoomCounts', (counts: GameRoomCounts) => {
-        console.log('📊 Room counts updated:', counts);
-        setRoomCounts(counts);
-      });
-
-      // Current session events
-      socket.on('currentSession', (snapshot: CurrentSessionSnapshot) => {
-        console.log('🎮 Current session snapshot:', snapshot);
-        setCurrentSession(snapshot);
-      });
-
-      socket.on('currentSessionUpdated', (snapshot: CurrentSessionSnapshot) => {
-        console.log('🔄 Current session updated:', snapshot);
-        setCurrentSession(snapshot);
-      });
-
-      // Early joiners events
-      socket.on('earlyJoinersList', (data: EarlyJoinersList) => {
-        console.log('👥 Early joiners list:', data);
-        setEarlyJoiners(data);
-      });
-
-      socket.on('earlyJoinersListResult', (data: EarlyJoinersList) => {
-        console.log('👥 Early joiners list result:', data);
-        setEarlyJoiners(data);
-      });
-
-      socket.on('roomEarlyJoinersUpdated', (data: EarlyJoinersList) => {
-        console.log('🔄 Room early joiners updated:', data);
-        setEarlyJoiners(data);
-      });
-
-      // Join room events
-      socket.on('gameJoinRoomResult', (result: JoinRoomResult) => {
-        console.log('🚪 Join room result:', result);
-        if (joinRoomPromiseRef.current) {
-          joinRoomPromiseRef.current.resolve(result);
-          joinRoomPromiseRef.current = null;
-        }
-      });
-
-      socket.on('joinRoomWithEarlyJoinersResult', (result: JoinRoomResult) => {
-        console.log('🚪 Join room with early joiners result:', result);
-        if (joinRoomPromiseRef.current) {
-          joinRoomPromiseRef.current.resolve(result);
-          joinRoomPromiseRef.current = null;
-        }
-      });
-
-      socket.on('gameJoinRoomUpdated', (data: { roomId: number; sessionId: number; joinList: EarlyJoiner[] }) => {
-        console.log('🔄 Game join room updated:', data);
-        // Update early joiners when someone joins
-        setEarlyJoiners(prev => prev ? {
-          ...prev,
-          earlyJoiners: data.joinList,
-          totalCount: data.joinList.length,
-        } : null);
-      });
-
-      // Error handling
-      socket.on('error', (errorData: { message: string }) => {
-        console.error('❌ WebSocket error:', errorData);
-        const errorMessage = errorData.message || 'WebSocket connection error';
-        setError(errorMessage);
-        onError?.(errorMessage);
-      });
-
-      socket.on('connect_error', (err) => {
-        console.error('❌ Connection error:', err);
-        const errorMessage = err.message || 'Failed to connect to WebSocket';
-        setError(errorMessage);
-        onError?.(errorMessage);
-        setIsConnecting(false);
-      });
-
-      socketRef.current = socket;
-      socket.connect();
-    } catch (err) {
-      console.error('❌ Failed to create WebSocket connection:', err);
-      const errorMessage = err instanceof Error ? err.message : 'Failed to create WebSocket connection';
-      setError(errorMessage);
-      onError?.(errorMessage);
-      setIsConnecting(false);
-    }
-  }, [serverUrl, onConnect, onDisconnect, onError]);
-
-  // Disconnect from WebSocket
-  const disconnect = useCallback(() => {
-    if (socketRef.current) {
-      socketRef.current.disconnect();
-      socketRef.current = null;
-    }
-    setIsConnected(false);
-    setIsConnecting(false);
-    setConnectionInfo(null);
-  }, []);
-
-  // Subscribe to room counts by game type
-  const subscribeRoomCountByGameType = useCallback((gtId: number): Promise<GameRoomCounts | null> => {
-    if (!socketRef.current?.connected) {
-      console.warn('⚠️ WebSocket not connected, cannot subscribe to room counts');
-      return Promise.resolve(null);
-    }
-
-    return new Promise((resolve) => {
-      // Set up one-time listener for the response
-      const handleResponse = (counts: GameRoomCounts) => {
-        console.log('📊 Room counts received:', counts);
-        setRoomCounts(counts);
-        socketRef.current?.off('gameRoomCounts', handleResponse);
-        resolve(counts);
-      };
-
-      socketRef.current?.on('gameRoomCounts', handleResponse);
-      console.log('📊 Subscribing to room counts for game type:', gtId);
-      socketRef.current?.emit('subscribeRoomCountByGameType', gtId);
-
-      // Timeout after 5 seconds
-      setTimeout(() => {
-        socketRef.current?.off('gameRoomCounts', handleResponse);
-        resolve(null);
-      }, 5000);
-    });
-  }, []);
-
-  // Subscribe to current session
-  const subscribeCurrentSession = useCallback((roomId: number) => {
-    if (!socketRef.current?.connected) {
-      console.warn('⚠️ WebSocket not connected, cannot subscribe to current session');
-      return;
-    }
-
-    console.log('🎮 Subscribing to current session for room:', roomId);
-    socketRef.current.emit('subscribeCurrentSession', roomId);
-  }, []);
-
-  // Get early joiners list
-  const getEarlyJoinersList = useCallback((payload: { roomId: number; sessionId?: number }) => {
-    if (!socketRef.current?.connected) {
-      console.warn('⚠️ WebSocket not connected, cannot get early joiners list');
-      return;
-    }
-
-    console.log('👥 Getting early joiners list:', payload);
-    socketRef.current.emit('getEarlyJoinersList', payload);
-  }, []);
-
-  // Join room
-  const joinRoom = useCallback(async (payload: { roomId: number; amount: number }): Promise<JoinRoomResult | null> => {
-    if (!socketRef.current?.connected) {
-      console.warn('⚠️ WebSocket not connected, cannot join room');
-      return null;
-    }
-
-    return new Promise((resolve, reject) => {
-      joinRoomPromiseRef.current = { resolve, reject };
-      
-      console.log('🚪 Joining room:', payload);
-      socketRef.current!.emit('gameJoinRoom', payload);
-
-      // Timeout after 10 seconds
-      setTimeout(() => {
-        if (joinRoomPromiseRef.current) {
-          joinRoomPromiseRef.current.resolve(null);
-          joinRoomPromiseRef.current = null;
-        }
-      }, 10000);
-    });
-  }, []);
-
-  // Join room with early joiners
-  const joinRoomWithEarlyJoiners = useCallback(async (payload: { roomId: number; amount: number }): Promise<JoinRoomResult | null> => {
-    if (!socketRef.current?.connected) {
-      console.warn('⚠️ WebSocket not connected, cannot join room');
-      return null;
-    }
-
-    return new Promise((resolve, reject) => {
-      joinRoomPromiseRef.current = { resolve, reject };
-      
-      console.log('🚪 Joining room with early joiners:', payload);
-      socketRef.current!.emit('joinRoomWithEarlyJoiners', payload);
-
-      // Timeout after 10 seconds
-      setTimeout(() => {
-        if (joinRoomPromiseRef.current) {
-          joinRoomPromiseRef.current.resolve(null);
-          joinRoomPromiseRef.current = null;
-        }
-      }, 10000);
-    });
-  }, []);
-
-  // Auto-connect on mount
-  useEffect(() => {
-    if (autoConnect) {
-      connect();
-    }
-
-    return () => {
-      disconnect();
-    };
-  }, [autoConnect, connect, disconnect]);
-
-  return {
-    // Connection state
-    isConnected,
-    isConnecting,
-    connectionInfo,
-    
-    // Room counts
-    roomCounts,
-    subscribeRoomCountByGameType,
-    
-    // Current session
-    currentSession,
-    subscribeCurrentSession,
-    
-    // Early joiners
-    earlyJoiners,
-    getEarlyJoinersList,
-    
-    // Room joining
-    joinRoom,
-    joinRoomWithEarlyJoiners,
-    
-    // Connection management
-    connect,
-    disconnect,
-    
-    // Error handling
-    error,
-    clearError,
-  };
-};
-
-export default useGameRoomWebSocket;
-```
-
-## Usage Examples
-
-### Basic Usage
-
-```typescript
-// components/GameRoomComponent.tsx
-import React, { useEffect } from 'react';
-import { useGameRoomWebSocket } from '../hooks/useGameRoomWebSocket';
-
-const GameRoomComponent: React.FC = () => {
-  const {
-    isConnected,
-    isConnecting,
-    connectionInfo,
-    roomCounts,
-    currentSession,
-    earlyJoiners,
-    subscribeRoomCountByGameType,
-    subscribeCurrentSession,
-    getEarlyJoinersList,
-    joinRoom,
-    joinRoomWithEarlyJoiners,
-    error,
-    clearError,
-  } = useGameRoomWebSocket({
-    serverUrl: 'http://localhost:8008',
-    autoConnect: true,
-    onConnect: (info) => {
-      console.log('Connected as user:', info.userId);
-    },
-    onDisconnect: () => {
-      console.log('Disconnected from game rooms');
-    },
-    onError: (error) => {
-      console.error('WebSocket error:', error);
-    },
-  });
-
-  // Subscribe to room counts for game type 1
-  useEffect(() => {
-    if (isConnected) {
-      subscribeRoomCountByGameType(1).then((counts) => {
-        if (counts) {
-          console.log('Room counts received:', counts);
-        } else {
-          console.log('Failed to get room counts');
-        }
-      });
-    }
-  }, [isConnected, subscribeRoomCountByGameType]);
-
-  // Subscribe to current session for room 123
-  useEffect(() => {
-    if (isConnected) {
-      subscribeCurrentSession(123);
-    }
-  }, [isConnected, subscribeCurrentSession]);
-
-  const handleJoinRoom = async () => {
-    try {
-      const result = await joinRoom({ roomId: 123, amount: 100 });
-      if (result?.success) {
-        console.log('Successfully joined room:', result);
-      } else {
-        console.error('Failed to join room:', result?.error);
-      }
-    } catch (error) {
-      console.error('Error joining room:', error);
-    }
-  };
-
-  const handleJoinRoomWithEarlyJoiners = async () => {
-    try {
-      const result = await joinRoomWithEarlyJoiners({ roomId: 123, amount: 100 });
-      if (result?.success) {
-        console.log('Successfully joined room with early joiners:', result);
-      } else {
-        console.error('Failed to join room:', result?.error);
-      }
-    } catch (error) {
-      console.error('Error joining room:', error);
-    }
-  };
-
-  const handleGetEarlyJoiners = () => {
-    getEarlyJoinersList({ roomId: 123, sessionId: 456 });
-  };
-
-  const handleGetRoomCounts = async () => {
-    try {
-      const counts = await subscribeRoomCountByGameType(1);
-      if (counts) {
-        console.log('Room counts:', counts);
-        alert(`Total rooms: ${counts.total}, Pending: ${counts.pending}, Running: ${counts.running}`);
-      } else {
-        alert('Failed to get room counts');
-      }
-    } catch (error) {
-      console.error('Error getting room counts:', error);
-    }
-  };
-
-  if (isConnecting) {
-    return <div>Connecting to game rooms...</div>;
-  }
-
-  if (!isConnected) {
-    return <div>Not connected to game rooms</div>;
-  }
-
-  return (
-    <div>
-      <h2>Game Room WebSocket</h2>
-      
-      {connectionInfo && (
-        <div>
-          <p>Connected as: {connectionInfo.userId || 'Guest'}</p>
-          <p>Client ID: {connectionInfo.clientId}</p>
-        </div>
-      )}
-
-      {error && (
-        <div style={{ color: 'red' }}>
-          <p>Error: {error}</p>
-          <button onClick={clearError}>Clear Error</button>
-        </div>
-      )}
-
-      {roomCounts && (
-        <div>
-          <h3>Room Counts</h3>
-          <p>Pending: {roomCounts.pending}</p>
-          <p>Running: {roomCounts.running}</p>
-          <p>Out: {roomCounts.out}</p>
-          <p>End: {roomCounts.end}</p>
-          <p>Total: {roomCounts.total}</p>
-          <p>Last Updated: {roomCounts.lastUpdated}</p>
-        </div>
-      )}
-
-      {currentSession && (
-        <div>
-          <h3>Current Session</h3>
-          <p>Room ID: {currentSession.roomId}</p>
-          {currentSession.current_session ? (
-            <div>
-              <p>Session ID: {currentSession.current_session.id}</p>
-              <p>Status: {currentSession.current_session.status}</p>
-              <p>Participants: {currentSession.current_session.participants_count}/{currentSession.current_session.max_participants}</p>
-              <p>Can Join: {currentSession.current_session.can_join ? 'Yes' : 'No'}</p>
-            </div>
-          ) : (
-            <p>No active session</p>
-          )}
-        </div>
-      )}
-
-      {earlyJoiners && (
-        <div>
-          <h3>Early Joiners</h3>
-          <p>Total Count: {earlyJoiners.totalCount}</p>
-          <ul>
-            {earlyJoiners.earlyJoiners.map((joiner, index) => (
-              <li key={index}>
-                {joiner.username} - {joiner.fullname} (Joined: {new Date(joiner.joined_at).toLocaleString()})
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      <div>
-        <button onClick={handleJoinRoom}>Join Room</button>
-        <button onClick={handleJoinRoomWithEarlyJoiners}>Join Room with Early Joiners</button>
-        <button onClick={handleGetEarlyJoiners}>Get Early Joiners List</button>
-        <button onClick={handleGetRoomCounts}>Get Room Counts</button>
-      </div>
-    </div>
-  );
-};
-
-export default GameRoomComponent;
-```
-
-### Advanced Usage with Custom Configuration
-
-```typescript
-// pages/game-rooms.tsx
-import React, { useState, useEffect } from 'react';
-import { useGameRoomWebSocket } from '../hooks/useGameRoomWebSocket';
-
-const GameRoomsPage: React.FC = () => {
-  const [selectedGameType, setSelectedGameType] = useState<number>(1);
-  const [selectedRoomId, setSelectedRoomId] = useState<number | null>(null);
-
-  const {
-    isConnected,
-    roomCounts,
-    currentSession,
-    earlyJoiners,
-    subscribeRoomCountByGameType,
-    subscribeCurrentSession,
-    joinRoom,
-    error,
-  } = useGameRoomWebSocket({
-    serverUrl: process.env.NEXT_PUBLIC_WEBSOCKET_URL,
-    autoConnect: true,
-    onConnect: (info) => {
-      console.log('Connected to game rooms:', info);
-    },
-    onError: (error) => {
-      console.error('Game room WebSocket error:', error);
-    },
-  });
-
-  // Subscribe to room counts when game type changes
-  useEffect(() => {
-    if (isConnected && selectedGameType) {
-      subscribeRoomCountByGameType(selectedGameType);
-    }
-  }, [isConnected, selectedGameType, subscribeRoomCountByGameType]);
-
-  // Subscribe to current session when room changes
-  useEffect(() => {
-    if (isConnected && selectedRoomId) {
-      subscribeCurrentSession(selectedRoomId);
-    }
-  }, [isConnected, selectedRoomId, subscribeCurrentSession]);
-
-  const handleJoinRoom = async (roomId: number) => {
-    try {
-      const result = await joinRoom({ roomId, amount: 100 });
-      if (result?.success) {
-        alert(`Successfully joined room ${roomId}`);
-        setSelectedRoomId(roomId);
-      } else {
-        alert(`Failed to join room: ${result?.error || 'Unknown error'}`);
-      }
-    } catch (error) {
-      console.error('Error joining room:', error);
-      alert('Error joining room');
-    }
-  };
-
-  if (!isConnected) {
-    return <div>Connecting to game rooms...</div>;
-  }
-
-  return (
-    <div>
-      <h1>Game Rooms</h1>
-      
-      {error && (
-        <div style={{ color: 'red', padding: '10px', margin: '10px 0', border: '1px solid red' }}>
-          Error: {error}
-        </div>
-      )}
-
-      <div>
-        <label>
-          Game Type:
-          <select 
-            value={selectedGameType} 
-            onChange={(e) => setSelectedGameType(Number(e.target.value))}
-          >
-            <option value={1}>Type 1</option>
-            <option value={2}>Type 2</option>
-            <option value={3}>Type 3</option>
-          </select>
-        </label>
-      </div>
-
-      {roomCounts && (
-        <div style={{ margin: '20px 0' }}>
-          <h2>Room Statistics</h2>
-          <div style={{ display: 'flex', gap: '20px' }}>
-            <div>Pending: {roomCounts.pending}</div>
-            <div>Running: {roomCounts.running}</div>
-            <div>Out: {roomCounts.out}</div>
-            <div>End: {roomCounts.end}</div>
-            <div>Total: {roomCounts.total}</div>
-          </div>
-        </div>
-      )}
-
-      {currentSession && (
-        <div style={{ margin: '20px 0' }}>
-          <h2>Current Session (Room {currentSession.roomId})</h2>
-          {currentSession.current_session ? (
-            <div>
-              <p>Session ID: {currentSession.current_session.id}</p>
-              <p>Status: {currentSession.current_session.status}</p>
-              <p>Participants: {currentSession.current_session.participants_count}/{currentSession.current_session.max_participants}</p>
-              <p>Can Join: {currentSession.current_session.can_join ? 'Yes' : 'No'}</p>
-            </div>
-          ) : (
-            <p>No active session</p>
-          )}
-        </div>
-      )}
-
-      {earlyJoiners && (
-        <div style={{ margin: '20px 0' }}>
-          <h2>Early Joiners ({earlyJoiners.totalCount})</h2>
-          <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
-            {earlyJoiners.earlyJoiners.map((joiner, index) => (
-              <div key={index} style={{ padding: '5px', border: '1px solid #ccc', margin: '2px 0' }}>
-                <strong>{joiner.username}</strong> ({joiner.fullname})
-                <br />
-                Joined: {new Date(joiner.joined_at).toLocaleString()}
-                <br />
-                Amount: {joiner.amount}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <div style={{ margin: '20px 0' }}>
-        <h2>Available Rooms</h2>
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-          {[1, 2, 3, 4, 5].map((roomId) => (
-            <button
-              key={roomId}
-              onClick={() => handleJoinRoom(roomId)}
-              style={{
-                padding: '10px 20px',
-                backgroundColor: selectedRoomId === roomId ? '#007bff' : '#f8f9fa',
-                color: selectedRoomId === roomId ? 'white' : 'black',
-                border: '1px solid #ccc',
-                borderRadius: '4px',
-                cursor: 'pointer',
-              }}
-            >
-              Room {roomId}
-            </button>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-};
-
-export default GameRoomsPage;
-```
-
-## Environment Variables
-
-Add these to your `.env.local` file:
-
-```env
-NEXT_PUBLIC_WEBSOCKET_URL=http://localhost:8008
-```
-
-## Validation & Error Handling
-
-### Server-side Validations
-
-The WebSocket gateway performs comprehensive validations:
-
-1. **Authentication**
-   - JWT token validation from cookies
-   - User existence check
-   - Wallet connection verification
-
-2. **Input Validation**
-   - `roomId` must be a valid number
-   - `amount` must be a valid number
-   - `gt_id` must be a valid game type ID
-
-3. **Business Logic Validation**
-   - Room exists and is RUNNING
-   - Session exists and is PENDING
-   - User hasn't already joined
-   - Room has available capacity
-   - Wallet has sufficient MPB balance
-   - Wallet has MPB (not just USDT)
-
-4. **Time-based Logic**
-   - Within 3 minutes: Status = EXECUTED (actual participation)
-   - After 3 minutes: Status = VIEW (spectator only)
-
-### Error Messages
-
-Common error responses from server:
-
-- `"Unauthorized"` - User not authenticated
-- `"User not found"` - User doesn't exist in database
-- `"Invalid roomId"` - Invalid room ID provided
-- `"Invalid amount"` - Invalid amount provided
-- `"Wallet not connected"` - Wallet address not valid
-- `"Room not found or inactive"` - Room doesn't exist or not RUNNING
-- `"No joinable session"` - No PENDING session available
-- `"Already joined"` - User already joined this session
-- `"Room full"` - Room has reached maximum capacity
-- `"Wallet balance not enough"` - Insufficient MPB balance
-- `"Wallet balance has only USDT. You need to deposit MPB to join the room"` - No MPB balance
+The Game Rooms API module provides functionality for managing game rooms and game lists in a gaming platform. It allows users to create, update, delete, and retrieve game rooms with associated prize structures.
 
 ## Features
+- **Game Lists Management**: Create and manage different types of games
+- **Game Rooms Management**: Create, update, delete, and retrieve game rooms
+- **Prize Structure Management**: Set up prize distributions with validation
+- **User Authentication**: JWT-based authentication for protected endpoints
+- **Master User Validation**: Only master users can manage game rooms
 
-### ✅ Implemented Features
+- URL
+  ```http
+  https://8w7n4n91-8008.asse.devtunnels.ms/api/v1
+  ```
 
-1. **Connection Management**
-   - Auto-connect on mount
-   - Manual connect/disconnect
-   - Connection state tracking
-   - Error handling
+## API Endpoints
 
-2. **Room Counts**
-   - Subscribe to room counts by game type
-   - Real-time updates
-   - Error handling
+### Game Lists(/game-lists)
 
-3. **Current Session**
-   - Subscribe to current session for a room
-   - Real-time session updates
-   - Session status tracking
+Endpoint: /game-lists
 
-4. **Early Joiners**
-   - Get early joiners list
-   - Real-time updates when users join
-   - Participant information
+### Bảng `game_lists`
 
-5. **Room Joining**
-   - Join room functionality with amount
-   - Join room with early joiners and amount
-   - Promise-based API for async operations
-   - Timeout handling
-   - Comprehensive validation
+| Trường | Kiểu | Mô tả |
+|--------|------|-------|
+| `id` | `integer` | Primary key |
+| `name` | `varchar` | Tên coin (unique) |
+| `symbol` | `varchar` | Ký hiệu coin (unique) |
+| `status` | `enum` | 'active' hoặc 'inactive' |
 
-6. **Error Handling**
-   - Comprehensive error states
-   - Error clearing functionality
-   - Connection error handling
-   - Server validation error handling
+#### 2. Get All Game Lists
+```http
+GET /
+```
 
-### 🔧 Configuration Options
+**Description**: Retrieve all available game lists
 
-- **serverUrl**: WebSocket server URL
-- **autoConnect**: Whether to connect automatically on mount
-- **onConnect**: Callback when connected
-- **onDisconnect**: Callback when disconnected
-- **onError**: Callback for errors
-
-### 📡 WebSocket Events Handled
-
-**Client → Server:**
-- `subscribeRoomCountByGameType(gt_id: number)` - Subscribe to room counts by game type
-- `subscribeCurrentSession(roomId: number)` - Subscribe to current session for a room
-- `getEarlyJoinersList({ roomId: number, sessionId?: number })` - Get early joiners list
-- `gameJoinRoom({ roomId: number, amount: number })` - Join room with amount
-- `joinRoomWithEarlyJoiners({ roomId: number, amount: number })` - Join room with early joiners and amount
-
-**Server → Client:**
-- `connected` - Connection established with user info
-- `gameRoomCounts` - Room counts data
-- `currentSession` - Current session snapshot
-- `currentSessionUpdated` - Session status changed
-- `earlyJoinersList` - Early joiners list (from join room)
-- `earlyJoinersListResult` - Early joiners list (from get request)
-- `roomEarlyJoinersUpdated` - Early joiners updated (broadcast)
-- `gameJoinRoomResult` - Join room result
-- `joinRoomWithEarlyJoinersResult` - Join room with early joiners result
-- `gameJoinRoomUpdated` - Join room updated (broadcast)
-- `error` - Error occurred
-
-## Constants Usage
-
-Use the provided constants to match server-side behavior:
-
-```typescript
-import { 
-  GAME_ROOM_STATUS, 
-  GAME_SESSION_STATUS, 
-  GAME_JOIN_ROOM_STATUS 
-} from '../hooks/useGameRoomWebSocket';
-
-// Check room status
-if (room.status === GAME_ROOM_STATUS.RUNNING) {
-  // Room is active
-}
-
-// Check session status
-if (session.status === GAME_SESSION_STATUS.PENDING) {
-  // Session is waiting for participants
-}
-
-// Check join status
-if (joinStatus === GAME_JOIN_ROOM_STATUS.EXECUTED) {
-  // User is actually participating
-} else if (joinStatus === GAME_JOIN_ROOM_STATUS.VIEW) {
-  // User is only spectating
+**Response**:
+```json
+{
+  "message": "Game lists retrieved successfully",
+  "data": [
+    {
+      "id": 1,
+      "name": "Slot Machine",
+      "symbol": "SLOT"
+    }
+  ]
 }
 ```
 
-## TypeScript Support
+#### 3. Get Game List by ID
+```http
+GET /find-by-id?id=<:id>
 
-The hook is fully typed with TypeScript interfaces for all data structures and return types, providing excellent IDE support and type safety.
+```
+
+**Description**: Retrieve a specific game list by ID
+
+**Parameters**:
+- `id` (number): Game list ID
+
+**Response**:
+```json
+{
+  "message": "Game list retrieved successfully",
+  "data": {
+    "id": 1,
+    "name": "Slot Machine",
+    "symbol": "SLOT"
+  }
+
+
+}
+```
+
+### Game Rooms(/game-rooms)
+
+Endpoint: /game-rooms
+
+### Bảng `game_rooms`
+
+| Trường | Kiểu | Mô tả |
+|--------|------|-------|
+| `id` | `integer` | Primary key, tự động tăng |
+| `game_type_id` | `GameLists` | ID loại game (Foreign key) |
+| `current_session` | `GameSessions` | ID loại game (Foreign key). Trạng thái session (pending/running/out/end) |
+| `owner_id` | `User` | ID chủ sở hữu phòng (Foreign key) |
+| `name` | `varchar` | Tên phòng game |
+| `symbol` | `varchar` | Ký hiệu phòng game (có thể null) |
+| `participation_amount` | `decimal` | Số tiền tham gia |
+| `total_amount` | `decimal` | Tổng số tiền tham gia của người chơi |
+| `prizes_num` | `integer` | Số lượng giải thưởng |
+| `game_set_prizes` | `integer` | Get giải thưởng |
+| `join_room_num` | `integer` | Số người tham gia |
+| `joiners` | `Người tham giá` | Số người tham gia |
+
+#### Enum GameRoomStatus
+- `RUNNING` = 'run' - Phòng đang chạy  
+- `DELETE` = 'delete' - Phòng đã bị xóa
+
+#### Mối quan hệ
+- **game_type_id**: Liên kết với bảng `GameLists` (Many-to-One)
+- **owner_id**: Liên kết với bảng `User` (Many-to-One)
+
+
+#### 1. Create Game Room
+```http
+POST /
+```
+
+**Description**: Create a new game room with prize structure
+
+**Authentication**: Required (JWT)
+
+**Request Body**:
+```json
+{
+  "game_room": {
+    "name": "Phòng game 004",
+    "participation_amount": 10.50,
+    "prizes_num": 3
+  },
+  "game_set_prizes": [
+    {
+      "rank": 1,
+      "percent": 50.00
+    },
+    {
+      "rank": 2,
+      "percent": 30.00
+    },
+    {
+      "rank": 3,
+      "percent": 20.00
+    }
+  ],
+  "game_type_id": 1
+}
+```
+
+**Validation Rules**:
+- `participation_amount`: Number, 0-100, max 2 decimal places
+- `prizes_num`: Number, 1-20
+- `rank`: Number, 1-20, must be sequential (1, 2, 3, ...)
+- `percent`: Number, 0-100, max 2 decimal places, must decrease with rank
+- `game_type_id`: Ref with GameLists entity
+- Total percent must equal 100%
+- Maximum 20 prizes allowed
+
+**Response**:
+```json 
+status 200
+{
+    "message": "Game room created successfully"
+}
+
+status 400
+
+{
+    "statusCode": 400,
+    "message": "Game room participation amount must be greater than 0"
+
+
+
+}
+
+{
+    "statusCode": 400,
+    "message": "Game room participation amount and prizes number are required"
+
+
+
+}
+
+{
+    "statusCode": 400,
+    "message": "Game room prizes number must be equal to the number of prizes"
+}
+
+```
+
+#### 2. Get Game Rooms
+```http
+GET /
+```
+
+**Description**: Retrieve game rooms with pagination and filtering, Để biết phòng nào có đang chờ, hay đang chơi thì dựa vào status của game_session(current_session)
+
+**Authentication**: Required (JWT)
+
+**Query Parameters**:
+- `page` (number, optional): Page number (default: 1)
+- `limit` (number, optional): Items per page (default: 10)
+- `room_id` (number, optional): Filter by game room id
+- `host_id` (number, optional): Filter by game room owner id
+- `game_type_id` (number, optional): Filter by game room game type id
+- `host`  (string, optional): Filter by username owner
+- `name`  (string, optional): Filter by name game room
+- `status`  (string, optional): Filter by status của game session
+
+**Response**:
+```json
+{
+    "message": "Game rooms fetched successfully",
+    "data": [
+        {
+            "id": 73,
+            "name": "Phòng xổ số số 1112223334445556667",
+            "symbol": "https://m.media-amazon.com/images/I/71GNE098B4L.jpg",
+            "participation_amount": 115,
+            "prizes_num": 5,
+            "total_amount": 687,
+            "game_type_id": {
+                "id": 1,
+                "name": "Xổ số BLOCKCHAIN",
+                "symbol": "symbol",
+                "status": "active"
+            },
+            "owner_id": {
+                "id": 142859,
+                "username": "tranthe"
+            },
+            "current_session": {
+                "id": 2108,
+                "status": "pending",
+                "time_start": "2025-09-29T09:43:55.290Z",
+                "session": "Phòng xổ số số 1112223334445556667_nmgs69ytx8ou4gp60utymo1fyfh3kjkk",
+                "participants_count": 3,
+                "max_participants": 3,
+                "can_join": false
+            }
+        }
+    ],
+    "pagination": {
+        "page": 1,
+        "limit": 1,
+        "total": 91,
+        "totalPages": 91,
+        "hasNext": true,
+        "hasPrev": false
+    }
+}
+```
+
+#### 3. Get Game Room by ID
+```http
+GET /find-by-id?room_id=<:id>
+```
+
+**Description**: Retrieve a specific game room by ID
+
+**Authentication**: Required (JWT)
+
+**Parameters**:
+- `id` (number): Game room ID
+
+**Response**:
+```json
+{
+    "message": "Game room details fetched successfully",
+    "data": {
+        "id": 73,
+        "name": "Phòng xổ số số 1112223334445556667",
+        "symbol": "https://m.media-amazon.com/images/I/71GNE098B4L.jpg",
+        "participation_amount": 115,
+        "prizes_num": 5,
+        "total_amount": 0,
+        "game_type_id": {
+            "id": 1,
+            "name": "Xổ số BLOCKCHAIN",
+            "symbol": "symbol",
+            "status": "active"
+        },
+        "status": "run",
+        "owner_id": {
+            "id": 142859,
+            "username": "tranthe"
+        },
+        "current_session": {
+            "id": 171,
+            "status": "pending",
+            "time_start": "2025-09-28T09:52:13.304Z",
+            "session": "1759052953304",
+            "participants_count": 1,
+            "max_participants": 3,
+            "can_join": true
+        },
+        "game_set_prizes": [
+            {
+                "rank": 1,
+                "percent": 60
+            },
+            {
+                "rank": 2,
+                "percent": 30
+            },
+            {
+                "rank": 3,
+                "percent": 10
+            }
+        ],
+        "join_room_num": 1,
+        "joiners": [
+            {
+                "username": "tranthe",
+                "amount": 25.5,
+                "status": "executed",
+                "time_join": "2025-09-28T09:50:48.683Z",
+                "tx_hash": "1234567890"
+            }
+        ]
+    }
+}
+```
+
+**Error Response**:
+```json
+{
+  "statusCode": 404,
+  "message": "Game room not found",
+  "error": "Not Found"
+}
+```
+
+#### 4. Update Game Room
+```http
+PATCH /?id=<:id>
+```
+
+**Description**: Update an existing game room, thay đổi tên phòng, số tiền đặt cượt của phòng bằng giá mới, sau khi trạng thái session game end thì trong khoản thời gian 10s sẽ được cập nhật lại thông tin phòng
+
+**Authentication**: Required (JWT)
+
+**Parameters**:
+- `id` (number): Game room ID
+
+**Request Body**:
+```json
+{
+    "name_new": "Phòng game 59",
+    "symbol": "SYMBOL 1111",
+    "participation_amount_new": 30
+}
+```
+
+#### 5. Delete Game Room
+```http
+DELETE /?id=<:id>
+```
+**Description**: Soft delete a game room (sets status to DELETE), xóa phòng ở bảng game_room còn trạng thái của game_session mà liên kết với bảng game_room thì được hiển thị realtime nếu phòng đó đang chơi game, và sau khi kết thúc game thì phòng bị xóa
+
+**Authentication**: Required (JWT)
+
+
+**Parameters**:
+- `id` (number): Game room ID
+
+**Response**:
+```json
+{
+  "message": "Game room deleted successfully"
+}
+```
+
+```http
+  https://8w7n4n91-8008.asse.devtunnels.ms/api/v1
+```
+
+## API Endpoints
+
+### 1. Join Game Room
+**POST** `/game-join-rooms`
+
+
+Tham gia vào một phòng game với session cụ thể.
+
+
+#### Request Body
+```json
+{
+    "session_id": 53,
+    "room_id": 59,
+    "amount": 25.5
+}
+```
+
+#### Request Body Schema
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `session_id` | number | Yes | ID của session game |
+| `room_id` | number | Yes | ID của phòng game |
+| `amount` | number | Yes | Số tiền tham gia |
+
+#### Success Response (201)
+```json
+{
+  "message": "Join room successfully"
+}
+
+```
+
+#### Error Responses
+| Status Code | Message | Description |
+|-------------|---------|-------------|
+| 400 | Invalid parameters | Thiếu tham số bắt buộc |
+| 400 | Game room not found | Không tìm thấy phòng game |
+| 400 | Game session not found | Không tìm thấy session |
+| 400 | Wallet not connected | Ví chưa được kết nối |
+| 400 | Insufficient balance | Số dư không đủ |
+| 400 | You have already joined this room | Đã tham gia phòng này rồi |
+| 400 | Session has already started for more than 3 minutes. You cannot join now. | Session đã hết hạn |
+| 400 | Session has not started yet. Please wait for the session to begin. | Session chưa bắt đầu |
+| 400 | Session has reached the maximum number of participants. | Đã đủ số người tham gia |
+| 401 | Unauthorized | Token không hợp lệ |
+
+---
+
+### 2. Get Game Join Rooms
+**GET** `/game-join-rooms`
+
+```
+GET /game-join-rooms/by-room?room_id=<:id>&session_id=<:id>
+```
+
+```json
+{
+    "message": "Game join room fetched successfully",
+    "data": [
+        {
+            "id": 54,
+            "wallet_address": "HqMj8L8Y5BVj3SnjHCaUoXBG5Cix7BmyGubZbyhg866C",
+            "amount": 25.5,
+            "time_join": "2025-09-28T08:18:37.594Z",
+            "status": "executed",
+            "tx_hash": "1234567890",
+            "session": {
+                "id": 128,
+                "session": "1759047365705",
+                "time_start": "2025-09-28T08:19:05.705Z",
+                "status": "out"
+            },
+            "room": {
+                "id": 73,
+                "name": "Phòng xổ số số 1112223334445556667",
+                "participation_amount": 115,
+                "prizes_num": 5
+            },
+            "user": {
+                "id": 142862,
+                "username": "Dautay"
+            }
+        }
+    ],
+    "pagination": {
+        "page": 1,
+        "limit": 10,
+        "total": 1,
+        "totalPages": 1,
+        "hasNext": false,
+        "hasPrev": false
+    }
+}
+```
+
+Lấy danh sách các lần tham gia phòng game.
+
+---
+
+### 7. Check New Session Availability
+**GET** `/game-join-rooms/check-new-session`
+
+Kiểm tra session mới đã được tạo và sẵn sàng join chưa.
+
+#### Query Parameters
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `room_id` | number | Yes | ID của phòng game |
+
+#### Example Request
+```
+GET /game-join-rooms/check-new-session?room_id=1
+```
+
+
+#### Success Response (200)
+```json
+{
+  "message": "New session is available",
+  "data": {
+    "room_id": 1,
+    "latest_session_id": 2,
+    "session_status": "pending",
+    "session_available": true,
+    "can_join": true,
+    "session_start_time": "2024-01-01T12:05:00.000Z",
+    "message": "You can join the new session now"
+  }
+}
+```
+#### Response Fields
+| Field | Type | Description |
+|-------|------|-------------|
+| `room_id` | number | ID của phòng game |
+| `latest_session_id` | number | ID của session mới nhất |
+| `session_status` | string | Trạng thái session (pending/running/out/end) |
+| `session_available` | boolean | Session mới có sẵn sàng không |
+| `can_join` | boolean | Có thể join session mới không |
+| `session_start_time` | string | Thời gian bắt đầu session |
+| `message` | string | Thông báo trạng thái |
+
+#### Possible Messages
+- `"New session is available"` - Session mới đã sẵn sàng
+- `"No new session available yet"` - Session mới chưa sẵn sàng
+- `"No session found for this room"` - Không tìm thấy session nào
+
+#### Error Responses
+| Status Code | Message | Description |
+|-------------|---------|-------------|
+| 400 | Game room not found | Không tìm thấy phòng game |
+| 500 | Error checking new session | Lỗi server |
+
+---
+
+## Updated Business Logic
+
+### Session Time Management with Auto-Creation
+- Khi tạo session mới, `time_start` được set = thời gian hiện tại + 3 phút
+- User chỉ có thể join trong vòng 3 phút sau khi session bắt đầu
+- **Mới**: Sau 3 phút, nếu số người tham gia < số giải thưởng → Session bị cancel và tự động tạo session mới sau 10 giây
+- Sau 3 phút, nếu số người tham gia >= số giải thưởng → Session tiếp tục
+
+### Auto Session Creation Flow
+1. **Session hết hạn** → Đánh dấu session cũ là `OUT`
+2. **Delay 10 giây** → Chờ 10 giây trước khi tạo session mới
+3. **Tạo session mới** → Session mới với status `PENDING`
+4. **User có thể join** → User có thể join session mới
+
+### Room Status Flow
+1. **WAIT** → User có thể join
+2. **RUN** → Session đang chạy, không cho join mới
+3. **INACTIVE** → Phòng không hoạt động
+4. **DELETE** → Phòng đã bị xóa
+
+### Session Status Flow
+1. **PENDING** → Đang chờ người tham gia
+2. **RUNNING** → Session đang chạy
+3. **OUT** → Session hết hạn hoặc bị cancel
+4. **END** → Session đã kết thúc
+
+---
+
+## Data Models
+
+### GameRoomStatus Enum
+```typescript
+enum GameRoomStatus {
+  WAIT = 'wait',
+  RUN = 'run',
+  INACTIVE = 'inactive',
+  DELETE = 'delete'
+}
+```
+
+### GameListStatus Enum
+```typescript
+enum GameListStatus {
+  ACTIVE = 'active',
+  INACTIVE = 'inactive'
+}
+```
+
+## Business Rules
+
+### Prize Structure Validation
+1. **Rank Sequence**: Ranks must be sequential starting from 1 (1, 2, 3, ...)
+2. **Percent Order**: Percent must decrease with rank (rank 1 has highest percent)
+3. **Total Percent**: Sum of all percentages must equal exactly 100%
+4. **Maximum Prizes**: Maximum 20 prizes allowed per game room
+5. **Percent Range**: Each prize percent must be between 0-100%
+6. **Prize Count Match**: Number of prizes must match `gr_prizes_num` field
+
+### User Permissions
+- Only users with `is_master: true` can create, update, or delete game rooms
+- All game room operations require JWT authentication
+- Game list operations are public (no authentication required)
+
+### Update Logic
+- **Complete Prize Replacement**: When updating a game room with `game_set_prizes`, the system performs a complete replacement:
+  1. Deletes ALL existing prizes for the game room
+  2. Creates new prizes from the provided data
+  3. Uses database transactions to ensure data consistency
+- **Optional Prize Update**: If `game_set_prizes` is not provided in the update request, only the basic game room information is updated
+- **Transaction Safety**: All prize operations are wrapped in database transactions to prevent partial updates
+
+### Game Room Naming
+- Game room names are auto-generated using format: `{DEFAULT_SYMBOL}_{GAME_TYPE_SYMBOL}_{SEQUENCE}`
+- Example: `GOLD_SLOT_001`, `GOLD_POKER_002`
 
 ## Error Handling
 
-The hook provides comprehensive error handling for:
-- Connection errors
-- WebSocket errors
-- Join room failures
-- Timeout scenarios
-- Invalid responses
+### Common Error Responses
 
-## Performance Considerations
+#### 400 Bad Request
+```json
+{
+  "statusCode": 400,
+  "message": "Rank must be sequential starting from 1, but got rank 3 at position 2",
+  "error": "Bad Request"
+}
+```
 
-- Automatic cleanup on unmount
-- Efficient state updates
-- Promise-based async operations
-- Timeout handling for operations
-- Memory leak prevention
 
-## Troubleshooting
+#### 401 Unauthorized
+```json
+{
+  "statusCode": 401,
+  "message": "Unauthorized",
+  "error": "Unauthorized"
+}
+```
 
-### Common Issues
+#### 403 Forbidden
+```json
+{
+  "statusCode": 403,
+  "message": "User is not master",
+  "error": "Forbidden"
+}
+```
 
-1. **"Unauthorized" Error**
-   - Ensure JWT token is present in cookies
-   - Check if token is valid and not expired
-   - Verify user exists in database
+#### 404 Not Found
+```json
+{
+  "statusCode": 404,
+  "message": "Game room not found",
+  "error": "Not Found"
+}
+```
 
-2. **"Wallet not connected" Error**
-   - Ensure wallet address is valid Solana public key
-   - Check if wallet is properly connected
+#### 500 Internal Server Error
+```json
+{
+  "statusCode": 500,
+  "message": "Default symbol not found",
+  "error": "Internal Server Error"
+}
 
-3. **"Room not found or inactive" Error**
-   - Verify room ID exists
-   - Check if room status is RUNNING
+```
 
-4. **"No joinable session" Error**
-   - Check if there's a PENDING session for the room
-   - Verify session hasn't expired
+## Configuration
 
-5. **"Already joined" Error**
-   - User has already joined this session
-   - Check existing joins in database
+### Environment Variables
+- `DEFAULT_SYMBOL_GAME_ROOM`: Default symbol for game room naming (required)
 
-6. **"Room full" Error**
-   - Room has reached maximum participants
-   - Check room capacity vs current joins
+## Usage Examples
 
-7. **"Wallet balance not enough" Error**
-   - User doesn't have sufficient MPB balance
-   - Check wallet balance before joining
+### Creating a Game Room with Prizes
+```javascript
+const response = await fetch('/game-rooms', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': 'Bearer your-jwt-token'
+  },
+  body: JSON.stringify({
+    game_room: {
+      participation_amount: 25.00,
+      prizes_num: 3
+    },
+    game_set_prizes: [
+      { rank: 1, percent: 60.00 },
+      { rank: 2, percent: 25.00 },
+      { rank: 3, percent: 15.00 }
+    ],
+    game_type_id: 1,
+  })
+});
+```
 
-8. **"Wallet balance has only USDT" Error**
-   - User needs to deposit MPB tokens
-   - USDT alone is not sufficient for participation
+### Updating Game Room Prizes
+```javascript
+const response = await fetch('/game-rooms?id=1', {
+  method: 'PATCH',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': 'Bearer your-jwt-token'
+  },
+  body: JSON.stringify({
+    game_room: {
+      name: "Updated Room",
+      symbol: "UPD",
+      participation_amount: 30.00,
+      prizes_num: 3
+    },
+    game_set_prizes: [
+      { rank: 1, percent: 50.00 },
+      { rank: 2, percent: 30.00 },
+      { rank: 3, percent: 20.00 }
+    ]
+  })
+});
+```
 
-### Debug Tips
-
-1. **Enable Console Logging**
-   ```typescript
-   const { joinRoom } = useGameRoomWebSocket({
-     onError: (error) => console.error('WebSocket Error:', error),
-   });
-   ```
-
-2. **Check Connection State**
-   ```typescript
-   const { isConnected, connectionInfo } = useGameRoomWebSocket();
-   console.log('Connected:', isConnected, 'Info:', connectionInfo);
-   ```
-
-3. **Validate Input Data**
-   ```typescript
-   // Before joining room
-   if (!roomId || !amount || amount <= 0) {
-     console.error('Invalid input data');
-     return;
-   }
-   ```
-
-4. **Handle Promise Rejections**
-   ```typescript
-   try {
-     const result = await joinRoom({ roomId: 123, amount: 100 });
-     if (result?.error) {
-       console.error('Join failed:', result.error);
-     }
-   } catch (error) {
-     console.error('Join error:', error);
-   }
-   ```
+## Notes
+- Game room deletion is soft delete (status set to DELETE)
+- **Prize updates are complete replacement**: When updating prizes, all existing prizes are deleted and replaced with new ones
+- All monetary values support up to 2 decimal places
+- Game room names are automatically generated and unique
+- The system validates prize structure integrity on every operation
+- Prize operations use database transactions to ensure data consistency
