@@ -204,15 +204,15 @@ GET /
 **Response**:
 ```json
 {
-    "message": "Game rooms fetched successfully",
     "data": [
         {
-            "id": 73,
-            "name": "Phòng xổ số số 1112223334445556667",
-            "symbol": "https://m.media-amazon.com/images/I/71GNE098B4L.jpg",
-            "participation_amount": 115,
-            "prizes_num": 5,
-            "total_amount": 687,
+            "id": 273,
+            "name": "12345",
+            "symbol": "GOLD",
+            "participation_amount": 5,
+            "prizes_num": 2,
+            "total_amount": 10,
+            "status": "running",
             "game_type_id": {
                 "id": 1,
                 "name": "Xổ số BLOCKCHAIN",
@@ -220,25 +220,22 @@ GET /
                 "status": "active"
             },
             "owner_id": {
-                "id": 142859,
-                "username": "tranthe"
+                "id": 142862,
+                "username": "Dautay"
             },
             "current_session": {
-                "id": 2108,
-                "status": "pending",
-                "time_start": "2025-09-29T09:43:55.290Z",
-                "session": "Phòng xổ số số 1112223334445556667_nmgs69ytx8ou4gp60utymo1fyfh3kjkk",
-                "participants_count": 3,
-                "max_participants": 3,
-                "can_join": false
+                "id": 339640,
+                "status": "running",
+                "time_start": "2025-10-04T10:02:49.009Z",
+                "session": "game_room_273_ggame_room_273_3game_room_273_tgame_room_273_ngame_room_273_3game_room_273_0game_room_273_vgame_room_273_7"
             }
         }
     ],
     "pagination": {
         "page": 1,
         "limit": 1,
-        "total": 91,
-        "totalPages": 91,
+        "total": 201,
+        "totalPages": 201,
         "hasNext": true,
         "hasPrev": false
     }
@@ -260,59 +257,38 @@ GET /find-by-id?room_id=<:id>
 **Response**:
 ```json
 {
-    "message": "Game room details fetched successfully",
-    "data": {
-        "id": 73,
-        "name": "Phòng xổ số số 1112223334445556667",
-        "symbol": "https://m.media-amazon.com/images/I/71GNE098B4L.jpg",
-        "participation_amount": 115,
-        "prizes_num": 5,
-        "total_amount": 0,
-        "game_type_id": {
-            "id": 1,
-            "name": "Xổ số BLOCKCHAIN",
-            "symbol": "symbol",
-            "status": "active"
+    "id": 263,
+    "name": "keo bua bao 12:01",
+    "symbol": "GOLD",
+    "participation_amount": 15,
+    "total_amount": 195,
+    "game_type_id": {
+        "id": 2,
+        "name": "Kéo búa bao",
+        "symbol": "symbol"
+    },
+    "owner_id": {
+        "id": 142858,
+        "username": "hleees"
+    },
+    "current_session": {
+        "id": 328206,
+        "status": "running",
+        "time_start": "2025-10-04T08:48:20.985Z",
+        "session": "1759567520985",
+        "can_join": false
+    },
+    "game_set_prizes": [
+        {
+            "rank": 1,
+            "percent": 60
         },
-        "status": "run",
-        "owner_id": {
-            "id": 142859,
-            "username": "tranthe"
-        },
-        "current_session": {
-            "id": 171,
-            "status": "pending",
-            "time_start": "2025-09-28T09:52:13.304Z",
-            "session": "1759052953304",
-            "participants_count": 1,
-            "max_participants": 3,
-            "can_join": true
-        },
-        "game_set_prizes": [
-            {
-                "rank": 1,
-                "percent": 60
-            },
-            {
-                "rank": 2,
-                "percent": 30
-            },
-            {
-                "rank": 3,
-                "percent": 10
-            }
-        ],
-        "join_room_num": 1,
-        "joiners": [
-            {
-                "username": "tranthe",
-                "amount": 25.5,
-                "status": "executed",
-                "time_join": "2025-09-28T09:50:48.683Z",
-                "tx_hash": "1234567890"
-            }
-        ]
-    }
+        {
+            "rank": 2,
+            "percent": 40
+        }
+    ],
+    "timestamp": "2025-10-04T10:37:53.738Z"
 }
 ```
 
@@ -830,16 +806,44 @@ GET /game-join-rooms/joiners-refund?session_id=123&page=1&limit=5
 #### Success Response (200)
 ```json
 {
-    "message": "No running session found for this room",
-    "data": [],
-    "pagination": {
-        "page": 1,
-        "limit": 10,
-        "total": 0,
-        "totalPages": 0,
-        "hasNext": false,
-        "hasPrev": false
-    }
+  "message": "Running room participants fetched successfully",
+  "prizes_info": {
+    "total_prizes": 2,
+    "prizes": [
+      { "rank": 1, "percent": 60 },
+      { "rank": 2, "percent": 40 }
+    ]
+  },
+  "participants": {
+    "data": [
+      {
+        "id": 1,
+        "wallet_address": "0x1234567890abcdef...",
+        "amount": 100,
+        "time_join": "2024-01-01T00:00:00.000Z",
+        "status": "executed",
+        "user": { "id": 1, "username": "user123" }
+      },
+      {
+        "id": 2,
+        "wallet_address": "0x1234567890abcdef...",
+        "amount": 150,
+        "time_join": "2024-01-01T00:00:00.000Z",
+        "status": "executed",
+        "user": { "id": 2, "username": "user124" }
+      }
+    ],
+    "total_count": 2,
+    "total_amount": 250
+  },
+  "pagination": {
+    "page": 1,
+    "limit": 5,
+    "total": 2,
+    "totalPages": 1,
+    "hasNext": false,
+    "hasPrev": false
+  }
 }
 ```
 #### Response Fields
