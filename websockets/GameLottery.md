@@ -77,6 +77,9 @@ interface UseLotteryGameReturn extends LotteryGameState {
   selectNumber: (ticketNumber: number) => Promise<void>;
   generateResults: () => Promise<void>;
   getSelectedNumbers: () => Promise<void>;
+  getViewedPrizes: (sessionId: number) => Promise<void>;
+  getPrize: (sessionId: number) => Promise<void>;
+  markPrizeAsViewed: (sessionId: number, winningNumber: number) => Promise<void>;
   
   // Status
   isAuthenticated: boolean;
@@ -265,6 +268,75 @@ export const useLotteryGame = (serverUrl: string = 'ws://localhost:3000'): UseLo
       }));
     });
 
+    socket.on('selectedNumbersUpdate', (data) => {
+      console.log('Selected numbers updated:', data);
+      setState(prev => ({ 
+        ...prev, 
+        selectedNumbers: data.selectedNumbers || [],
+        selectedNumbersWithClient: data.selectedNumbersWithClient || [],
+        error: null 
+      }));
+    });
+
+    socket.on('viewedPrizes', (data) => {
+      console.log('Viewed prizes received:', data);
+      setState(prev => ({ 
+        ...prev, 
+        prizes: data.prizes,
+        error: null 
+      }));
+    });
+
+    socket.on('prizeInfo', (data) => {
+      console.log('Prize info received:', data);
+      setState(prev => ({ 
+        ...prev, 
+        prizes: data.prizes,
+        error: null 
+      }));
+    });
+
+    socket.on('prizeMarkedAsViewed', (data) => {
+      console.log('Prize marked as viewed:', data);
+      setState(prev => ({ 
+        ...prev, 
+        error: null 
+      }));
+    });
+
+    socket.on('prizeAlreadyViewed', (data) => {
+      console.log('Prize already viewed:', data);
+      setState(prev => ({ 
+        ...prev, 
+        error: 'This prize has already been viewed'
+      }));
+    });
+
+    // Session completion events
+    socket.on('allPrizesViewed', (data) => {
+      console.log('All prizes viewed:', data);
+      setState(prev => ({ 
+        ...prev, 
+        error: null 
+      }));
+    });
+
+    socket.on('sessionClosed', (data) => {
+      console.log('Session closed:', data);
+      setState(prev => ({ 
+        ...prev, 
+        error: null 
+      }));
+    });
+
+    socket.on('newSessionCreated', (data) => {
+      console.log('New session created:', data);
+      setState(prev => ({ 
+        ...prev, 
+        error: null 
+      }));
+    });
+
     socket.on('error', (data) => {
       console.error('Lottery error:', data);
       setState(prev => ({ 
@@ -353,6 +425,39 @@ export const useLotteryGame = (serverUrl: string = 'ws://localhost:3000'): UseLo
     socketRef.current.emit('getSelectedNumbers', { sessionId: state.sessionId });
   }, [state.sessionId]);
 
+  // Get viewed prizes
+  const getViewedPrizes = useCallback(async (sessionId: number) => {
+    if (!socketRef.current?.connected) {
+      throw new Error('Not connected to server');
+    }
+
+    setState(prev => ({ ...prev, isLoading: true, error: null }));
+    
+    socketRef.current.emit('getViewedPrizes', { sessionId });
+  }, []);
+
+  // Get prize info
+  const getPrize = useCallback(async (sessionId: number) => {
+    if (!socketRef.current?.connected) {
+      throw new Error('Not connected to server');
+    }
+
+    setState(prev => ({ ...prev, isLoading: true, error: null }));
+    
+    socketRef.current.emit('getPrize', { sessionId });
+  }, []);
+
+  // Mark prize as viewed
+  const markPrizeAsViewed = useCallback(async (sessionId: number, winningNumber: number) => {
+    if (!socketRef.current?.connected) {
+      throw new Error('Not connected to server');
+    }
+
+    setState(prev => ({ ...prev, isLoading: true, error: null }));
+    
+    socketRef.current.emit('markPrizeAsViewed', { sessionId, winningNumber });
+  }, []);
+
   // Computed properties
   const canSelectNumber = state.isConnected && state.isJoined && state.countdown.isActive;
   const hasSelectedNumber = state.selectedNumbers.length > 0;
@@ -373,6 +478,9 @@ export const useLotteryGame = (serverUrl: string = 'ws://localhost:3000'): UseLo
     selectNumber,
     generateResults,
     getSelectedNumbers,
+    getViewedPrizes,
+    getPrize,
+    markPrizeAsViewed,
     isAuthenticated,
     canSelectNumber,
     hasSelectedNumber
@@ -411,6 +519,9 @@ const LotteryGameComponent: React.FC = () => {
     selectNumber,
     generateResults,
     getSelectedNumbers,
+    getViewedPrizes,
+    getPrize,
+    markPrizeAsViewed,
     
     // Status
     isAuthenticated,
@@ -450,6 +561,30 @@ const LotteryGameComponent: React.FC = () => {
     }
   };
 
+  const handleGetViewedPrizes = async () => {
+    try {
+      await getViewedPrizes(1); // sessionId = 1
+    } catch (err) {
+      console.error('Failed to get viewed prizes:', err);
+    }
+  };
+
+  const handleGetPrize = async () => {
+    try {
+      await getPrize(1); // sessionId = 1
+    } catch (err) {
+      console.error('Failed to get prize info:', err);
+    }
+  };
+
+  const handleMarkPrizeAsViewed = async (winningNumber: number) => {
+    try {
+      await markPrizeAsViewed(1, winningNumber); // sessionId = 1
+    } catch (err) {
+      console.error('Failed to mark prize as viewed:', err);
+    }
+  };
+
   return (
     <div className="lottery-game">
       <h2>Lottery Game</h2>
@@ -478,6 +613,17 @@ const LotteryGameComponent: React.FC = () => {
           <button onClick={handleStartSession} disabled={isLoading}>
             Start Session
           </button>
+        )}
+        
+        {isJoined && (
+          <>
+            <button onClick={handleGetViewedPrizes} disabled={isLoading}>
+              Get Viewed Prizes
+            </button>
+            <button onClick={handleGetPrize} disabled={isLoading}>
+              Get Prize Info
+            </button>
+          </>
         )}
       </div>
 
@@ -567,6 +713,15 @@ const LotteryGameComponent: React.FC = () => {
               <div key={index} className={`prize-item ${prize.view_status ? 'viewed' : 'not-viewed'}`}>
                 <span>Rank {prize.rank} - Number {prize.winningNumber} - {prize.percent}%</span>
                 <span className="status">{prize.view_status ? '✓ Viewed' : '○ Not Viewed'}</span>
+                {!prize.view_status && (
+                  <button 
+                    onClick={() => handleMarkPrizeAsViewed(prize.winningNumber)}
+                    disabled={isLoading}
+                    className="mark-viewed-btn"
+                  >
+                    Mark as Viewed
+                  </button>
+                )}
                 {prize.winner && (
                   <div className="winner-info">
                     <span>Winner: {prize.winner.username} ({prize.winner.fullname})</span>
@@ -736,6 +891,26 @@ export default LotteryGameComponent;
   margin-top: 2px;
 }
 
+.mark-viewed-btn {
+  background: #28a745;
+  color: white;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 12px;
+  margin-left: 10px;
+}
+
+.mark-viewed-btn:hover {
+  background: #218838;
+}
+
+.mark-viewed-btn:disabled {
+  background: #6c757d;
+  cursor: not-allowed;
+}
+
 .ticket-number {
   font-weight: bold;
   color: #007bff;
@@ -769,22 +944,61 @@ yarn add socket.io-client
 
 #### Client → Server Events:
 - `joinSession`: Join vào session room
-- `startSession`: Bắt đầu session (manual)
+- `startSession`: Bắt đầu session (manual) - **Đã bị comment out**
 - `selectNumber`: Chọn số
 - `getNumbers`: Lấy thông tin vé số
 - `getSelectedNumbers`: Lấy danh sách số đã chọn
+- `getViewedPrizes`: Lấy danh sách giải đã xem
+- `getPrize`: Lấy thông tin chi tiết về giải thưởng
+- `markPrizeAsViewed`: Đánh dấu giải đã xem
 - `generateResults`: Generate kết quả game
 
 #### Server → Client Events:
 - `sessionJoined`: Đã join session thành công
-- `sessionAutoStartScheduled`: Session sắp auto-start (2 giây trước)
-- `sessionStarted`: Session đã bắt đầu (manual hoặc auto)
+- `sessionAutoStartScheduled`: Session sắp auto-start (1 giây trước)
+- `sessionStarted`: Session đã bắt đầu (auto-start)
 - `numbersInfo`: Thông tin vé số (tự động gửi khi session start)
-- `selectNumberUpdated`: Cập nhật số đã chọn
+- `selectedNumbersUpdate`: Cập nhật danh sách số đã chọn
+- `selectNumberUpdated`: Cập nhật số đã chọn (broadcast)
+- `numberSelected`: Xác nhận chọn số thành công
+- `viewedPrizes`: Danh sách giải đã xem
+- `prizeInfo`: Thông tin chi tiết về giải thưởng
+- `prizeMarkedAsViewed`: Xác nhận đánh dấu giải đã xem
+- `prizeAlreadyViewed`: Thông báo giải đã được xem trước đó
 - `countdownUpdate`: Cập nhật countdown game
 - `gameResults`: Kết quả game
 - `prizeViewed`: Cập nhật khi có giải được đánh dấu đã xem
+- `allPrizesViewed`: Tất cả giải đã được xem (session sẽ đóng sớm)
+- `sessionClosed`: Session đã đóng (sau delay 2 giây)
+- `newSessionCreated`: Session mới đã được tạo và lên lịch
 - `error`: Lỗi từ server
+
+### Session Completion Logic
+
+Hệ thống tự động đóng session và tạo session mới khi tất cả giải thưởng đã được xem:
+
+#### Luồng Session Completion:
+
+```
+1. User đánh dấu giải cuối cùng đã xem (markPrizeAsViewed)
+2. System kiểm tra tất cả giải đã được xem chưa
+3. Nếu có → Emit 'allPrizesViewed' event
+4. Delay 2 giây (có thể cấu hình)
+5. Đóng session hiện tại (status = END) → Emit 'sessionClosed'
+6. Tạo session mới (status = PENDING) → Emit 'newSessionCreated'
+7. Thêm task vào queue để kiểm tra sau 3 phút
+```
+
+#### Events liên quan:
+
+- **`allPrizesViewed`**: Thông báo tất cả giải đã được xem, session sẽ đóng sớm
+- **`sessionClosed`**: Xác nhận session đã đóng sau delay 2 giây
+- **`newSessionCreated`**: Thông báo session mới đã được tạo và lên lịch
+
+#### Cấu hình:
+
+- **Delay đóng session**: 2 giây (có thể thay đổi trong `handleSessionCompletion`)
+- **Thời gian tạo session mới**: 3 phút sau (có thể thay đổi trong `SessionCreationService`)
 
 ### Auto-Start Functionality
 
@@ -792,16 +1006,16 @@ Hệ thống hỗ trợ tự động bắt đầu session lottery khi:
 
 1. **Session chuyển sang RUNNING**: Khi đủ người tham gia sau 3 phút
 2. **Game type là lottery**: Chỉ áp dụng cho game type ID = 1 (xổ số)
-3. **Delay 2 giây**: Cho phép clients có thời gian join session room
+3. **Delay 1 giây**: Cho phép clients có thời gian join session room
 4. **Real-time notifications**: Clients nhận được thông báo trước khi auto-start
 
 #### Luồng Auto-Start:
 
 ```
 1. Session PENDING → RUNNING (sau 3 phút)
-2. Emit 'sessionAutoStartScheduled' (2 giây trước)
+2. Emit 'sessionAutoStartScheduled' (1 giây trước)
 3. Client hiển thị countdown UI
-4. Delay 2 giây
+4. Delay 1 giây
 5. Emit 'sessionStarted' + 'numbersInfo'
 6. Client hiển thị game interface
 ```
@@ -853,6 +1067,17 @@ autoStartCountdown: {
    - Kiểm tra authentication cookies
    - Kiểm tra server URL
 
+5. **Session completion không hoạt động**:
+   - Kiểm tra tất cả giải đã được đánh dấu view chưa
+   - Kiểm tra event listener `allPrizesViewed`
+   - Kiểm tra delay 2 giây có được áp dụng không
+   - Kiểm tra queue service có hoạt động không
+
+6. **Events không được emit**:
+   - Kiểm tra event listeners trong websocket gateway
+   - Kiểm tra EventEmitter2 có được inject đúng không
+   - Kiểm tra logic kiểm tra tất cả giải đã xem
+
 #### Debug tips:
 
 ```typescript
@@ -862,6 +1087,11 @@ socket.on('disconnect', () => console.log('Disconnected'));
 socket.on('sessionAutoStartScheduled', (data) => console.log('Auto-start scheduled:', data));
 socket.on('sessionStarted', (data) => console.log('Session started:', data));
 socket.on('numbersInfo', (data) => console.log('Numbers info:', data));
+
+// Session completion events
+socket.on('allPrizesViewed', (data) => console.log('All prizes viewed:', data));
+socket.on('sessionClosed', (data) => console.log('Session closed:', data));
+socket.on('newSessionCreated', (data) => console.log('New session created:', data));
 ```
 
 ## License
