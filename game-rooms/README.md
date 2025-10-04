@@ -825,6 +825,23 @@ GET /game-join-rooms/joiners-refund?session_id=123&page=1&limit=5
 }
 ```
 
+### 12. 
+**GET** `/game-join-rooms/running-room-joiners?session_id=?<:id>`
+#### Success Response (200)
+```json
+{
+    "message": "No running session found for this room",
+    "data": [],
+    "pagination": {
+        "page": 1,
+        "limit": 10,
+        "total": 0,
+        "totalPages": 0,
+        "hasNext": false,
+        "hasPrev": false
+    }
+}
+```
 #### Response Fields
 | Field | Type | Description |
 |-------|------|-------------|
