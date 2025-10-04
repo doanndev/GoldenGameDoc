@@ -1,7 +1,7 @@
-# Game Room WebSocket React Hook
+# Game Room WebSocket React Hook - Optimized for Real-time Participants
 
 ## Overview
-This document provides a comprehensive React hook for integrating with the Game Room WebSocket gateway in Next.js applications. The hook handles all WebSocket events, connection management, and provides a clean API for game room functionality.
+This document provides a comprehensive React hook for integrating with the optimized Game Room WebSocket gateway in Next.js applications. The hook handles all WebSocket events, connection management, and provides a clean API for game room functionality with **real-time participants updates** and **high performance**.
 
 ## Installation
 
@@ -89,6 +89,14 @@ export interface GameRoomCounts {
   lottery: GameTypeCounts;
   rps: GameTypeCounts;
   total: GameTypeCounts;
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+    hasNext: boolean;
+    hasPrev: boolean;
+  };
   error?: string;
 }
 
@@ -107,38 +115,35 @@ export interface CurrentSessionSnapshot {
   current_session: CurrentSession | null;
 }
 
-export interface EarlyJoiner {
+export interface Participant {
+  id: number;
   user_id: number;
   username: string;
   fullname: string;
   avatar: string;
-  joined_at: string;
+  wallet_address: string;
   amount: number;
+  time_join: string;
   status: string;
 }
 
-export interface EarlyJoinersList {
+export interface RoomParticipants {
   roomId: number;
   sessionId: number;
-  earlyJoiners: EarlyJoiner[];
+  participants: Participant[];
   totalCount: number;
-  timestamp?: string;
+  timestamp: string;
 }
 
 export interface JoinRoomResult {
   success: boolean;
   roomId: number;
+  message?: string;
+  participants: Participant[];
+  totalCount: number;
   sessionId: number;
-  joinList?: EarlyJoiner[];
-  earlyJoiners?: EarlyJoiner[];
-  totalCount?: number;
-  userJoined?: {
-    user_id: number;
-    username: string;
-    fullname: string;
-    joined_at: string;
-  };
-  timestamp?: string;
+  sessionStatus: string;
+  timestamp: string;
   error?: string;
 }
 
@@ -165,21 +170,19 @@ export interface UseGameRoomWebSocketReturn {
   isConnecting: boolean;
   connectionInfo: ConnectionInfo | null;
   
-  // Room counts
+  // Room counts with pagination
   roomCounts: GameRoomCounts | null;
-  subscribeRoomCountByGameType: () => Promise<GameRoomCounts | null>;
+  subscribeRoomCountByGameType: (page?: number, limit?: number) => Promise<GameRoomCounts | null>;
   
   // Current session
   currentSession: CurrentSessionSnapshot | null;
   subscribeCurrentSession: (roomId: number) => void;
   
-  // Early joiners
-  earlyJoiners: EarlyJoinersList | null;
-  getEarlyJoinersList: (payload: { roomId: number; sessionId?: number }) => void;
-  
-  // Room joining
-  joinRoom: (payload: { roomId: number; amount: number }) => Promise<JoinRoomResult | null>;
-  joinRoomWithEarlyJoiners: (payload: { roomId: number; amount: number }) => Promise<JoinRoomResult | null>;
+  // Room participants (NEW)
+  roomParticipants: RoomParticipants | null;
+  joinRoom: (payload: { roomId: number }) => Promise<JoinRoomResult | null>;
+  leaveRoom: (payload: { roomId: number }) => void;
+  getCurrentRoomParticipants: (payload: { roomId: number }) => Promise<RoomParticipants | null>;
   
   // Connection management
   connect: () => void;
@@ -207,7 +210,7 @@ export const useGameRoomWebSocket = (
   const [connectionInfo, setConnectionInfo] = useState<ConnectionInfo | null>(null);
   const [roomCounts, setRoomCounts] = useState<GameRoomCounts | null>(null);
   const [currentSession, setCurrentSession] = useState<CurrentSessionSnapshot | null>(null);
-  const [earlyJoiners, setEarlyJoiners] = useState<EarlyJoinersList | null>(null);
+  const [roomParticipants, setRoomParticipants] = useState<RoomParticipants | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // Refs
@@ -275,24 +278,8 @@ export const useGameRoomWebSocket = (
         setCurrentSession(snapshot);
       });
 
-      // Early joiners events
-      socket.on('earlyJoinersList', (data: EarlyJoinersList) => {
-        console.log('👥 Early joiners list:', data);
-        setEarlyJoiners(data);
-      });
-
-      socket.on('earlyJoinersListResult', (data: EarlyJoinersList) => {
-        console.log('👥 Early joiners list result:', data);
-        setEarlyJoiners(data);
-      });
-
-      socket.on('roomEarlyJoinersUpdated', (data: EarlyJoinersList) => {
-        console.log('🔄 Room early joiners updated:', data);
-        setEarlyJoiners(data);
-      });
-
-      // Join room events
-      socket.on('gameJoinRoomResult', (result: JoinRoomResult) => {
+      // Room participants events (NEW)
+      socket.on('joinRoomResult', (result: JoinRoomResult) => {
         console.log('🚪 Join room result:', result);
         if (joinRoomPromiseRef.current) {
           joinRoomPromiseRef.current.resolve(result);
@@ -300,22 +287,14 @@ export const useGameRoomWebSocket = (
         }
       });
 
-      socket.on('joinRoomWithEarlyJoinersResult', (result: JoinRoomResult) => {
-        console.log('🚪 Join room with early joiners result:', result);
-        if (joinRoomPromiseRef.current) {
-          joinRoomPromiseRef.current.resolve(result);
-          joinRoomPromiseRef.current = null;
-        }
+      socket.on('roomParticipantsUpdated', (data: RoomParticipants) => {
+        console.log('👥 Room participants updated:', data);
+        setRoomParticipants(data);
       });
 
-      socket.on('gameJoinRoomUpdated', (data: { roomId: number; sessionId: number; joinList: EarlyJoiner[] }) => {
-        console.log('🔄 Game join room updated:', data);
-        // Update early joiners when someone joins
-        setEarlyJoiners(prev => prev ? {
-          ...prev,
-          earlyJoiners: data.joinList,
-          totalCount: data.joinList.length,
-        } : null);
+      socket.on('currentRoomParticipantsResult', (data: RoomParticipants) => {
+        console.log('👥 Current room participants result:', data);
+        setRoomParticipants(data);
       });
 
       // Error handling
@@ -356,8 +335,8 @@ export const useGameRoomWebSocket = (
     setConnectionInfo(null);
   }, []);
 
-  // Subscribe to room counts (all game types)
-  const subscribeRoomCountByGameType = useCallback((): Promise<GameRoomCounts | null> => {
+  // Subscribe to room counts with pagination
+  const subscribeRoomCountByGameType = useCallback((page: number = 1, limit: number = 50): Promise<GameRoomCounts | null> => {
     if (!socketRef.current?.connected) {
       console.warn('⚠️ WebSocket not connected, cannot subscribe to room counts');
       return Promise.resolve(null);
@@ -373,8 +352,8 @@ export const useGameRoomWebSocket = (
       };
 
       socketRef.current?.on('gameRoomCounts', handleResponse);
-      console.log('📊 Subscribing to room counts for all game types');
-      socketRef.current?.emit('subscribeRoomCountByGameType'); // No parameter needed
+      console.log('📊 Subscribing to room counts with pagination:', { page, limit });
+      socketRef.current?.emit('subscribeRoomCountByGameType', { page, limit });
 
       // Timeout after 5 seconds
       setTimeout(() => {
@@ -395,19 +374,8 @@ export const useGameRoomWebSocket = (
     socketRef.current.emit('subscribeCurrentSession', roomId);
   }, []);
 
-  // Get early joiners list
-  const getEarlyJoinersList = useCallback((payload: { roomId: number; sessionId?: number }) => {
-    if (!socketRef.current?.connected) {
-      console.warn('⚠️ WebSocket not connected, cannot get early joiners list');
-      return;
-    }
-
-    console.log('👥 Getting early joiners list:', payload);
-    socketRef.current.emit('getEarlyJoinersList', payload);
-  }, []);
-
-  // Join room
-  const joinRoom = useCallback(async (payload: { roomId: number; amount: number }): Promise<JoinRoomResult | null> => {
+  // Join room and get participants
+  const joinRoom = useCallback(async (payload: { roomId: number }): Promise<JoinRoomResult | null> => {
     if (!socketRef.current?.connected) {
       console.warn('⚠️ WebSocket not connected, cannot join room');
       return null;
@@ -417,7 +385,7 @@ export const useGameRoomWebSocket = (
       joinRoomPromiseRef.current = { resolve, reject };
       
       console.log('🚪 Joining room:', payload);
-      socketRef.current!.emit('gameJoinRoom', payload);
+      socketRef.current!.emit('joinRoom', payload);
 
       // Timeout after 10 seconds
       setTimeout(() => {
@@ -429,26 +397,41 @@ export const useGameRoomWebSocket = (
     });
   }, []);
 
-  // Join room with early joiners
-  const joinRoomWithEarlyJoiners = useCallback(async (payload: { roomId: number; amount: number }): Promise<JoinRoomResult | null> => {
+  // Leave room
+  const leaveRoom = useCallback((payload: { roomId: number }) => {
     if (!socketRef.current?.connected) {
-      console.warn('⚠️ WebSocket not connected, cannot join room');
+      console.warn('⚠️ WebSocket not connected, cannot leave room');
+      return;
+    }
+
+    console.log('🚪 Leaving room:', payload);
+    socketRef.current.emit('leaveRoom', payload);
+  }, []);
+
+  // Get current room participants
+  const getCurrentRoomParticipants = useCallback(async (payload: { roomId: number }): Promise<RoomParticipants | null> => {
+    if (!socketRef.current?.connected) {
+      console.warn('⚠️ WebSocket not connected, cannot get participants');
       return null;
     }
 
-    return new Promise((resolve, reject) => {
-      joinRoomPromiseRef.current = { resolve, reject };
-      
-      console.log('🚪 Joining room with early joiners:', payload);
-      socketRef.current!.emit('joinRoomWithEarlyJoiners', payload);
+    return new Promise((resolve) => {
+      const handleResponse = (data: RoomParticipants) => {
+        console.log('👥 Current room participants received:', data);
+        setRoomParticipants(data);
+        socketRef.current?.off('currentRoomParticipantsResult', handleResponse);
+        resolve(data);
+      };
 
-      // Timeout after 10 seconds
+      socketRef.current?.on('currentRoomParticipantsResult', handleResponse);
+      console.log('👥 Getting current room participants:', payload);
+      socketRef.current?.emit('getCurrentRoomParticipants', payload);
+
+      // Timeout after 5 seconds
       setTimeout(() => {
-        if (joinRoomPromiseRef.current) {
-          joinRoomPromiseRef.current.resolve(null);
-          joinRoomPromiseRef.current = null;
-        }
-      }, 10000);
+        socketRef.current?.off('currentRoomParticipantsResult', handleResponse);
+        resolve(null);
+      }, 5000);
     });
   }, []);
 
@@ -469,7 +452,7 @@ export const useGameRoomWebSocket = (
     isConnecting,
     connectionInfo,
     
-    // Room counts
+    // Room counts with pagination
     roomCounts,
     subscribeRoomCountByGameType,
     
@@ -477,13 +460,11 @@ export const useGameRoomWebSocket = (
     currentSession,
     subscribeCurrentSession,
     
-    // Early joiners
-    earlyJoiners,
-    getEarlyJoinersList,
-    
-    // Room joining
+    // Room participants (NEW)
+    roomParticipants,
     joinRoom,
-    joinRoomWithEarlyJoiners,
+    leaveRoom,
+    getCurrentRoomParticipants,
     
     // Connection management
     connect,
@@ -514,12 +495,12 @@ const GameRoomComponent: React.FC = () => {
     connectionInfo,
     roomCounts,
     currentSession,
-    earlyJoiners,
+    roomParticipants,
     subscribeRoomCountByGameType,
     subscribeCurrentSession,
-    getEarlyJoinersList,
     joinRoom,
-    joinRoomWithEarlyJoiners,
+    leaveRoom,
+    getCurrentRoomParticipants,
     error,
     clearError,
   } = useGameRoomWebSocket({
@@ -536,10 +517,10 @@ const GameRoomComponent: React.FC = () => {
     },
   });
 
-  // Subscribe to room counts for all game types
+  // Subscribe to room counts with pagination
   useEffect(() => {
     if (isConnected) {
-      subscribeRoomCountByGameType().then((counts) => {
+      subscribeRoomCountByGameType(1, 50).then((counts) => {
         if (counts) {
           console.log('Room counts received:', counts);
         } else {
@@ -558,9 +539,10 @@ const GameRoomComponent: React.FC = () => {
 
   const handleJoinRoom = async () => {
     try {
-      const result = await joinRoom({ roomId: 123, amount: 100 });
+      const result = await joinRoom({ roomId: 123 });
       if (result?.success) {
         console.log('Successfully joined room:', result);
+        console.log('Participants:', result.participants);
       } else {
         console.error('Failed to join room:', result?.error);
       }
@@ -569,29 +551,29 @@ const GameRoomComponent: React.FC = () => {
     }
   };
 
-  const handleJoinRoomWithEarlyJoiners = async () => {
+  const handleLeaveRoom = () => {
+    leaveRoom({ roomId: 123 });
+  };
+
+  const handleGetParticipants = async () => {
     try {
-      const result = await joinRoomWithEarlyJoiners({ roomId: 123, amount: 100 });
-      if (result?.success) {
-        console.log('Successfully joined room with early joiners:', result);
+      const participants = await getCurrentRoomParticipants({ roomId: 123 });
+      if (participants) {
+        console.log('Current participants:', participants);
       } else {
-        console.error('Failed to join room:', result?.error);
+        console.log('Failed to get participants');
       }
     } catch (error) {
-      console.error('Error joining room:', error);
+      console.error('Error getting participants:', error);
     }
-  };
-
-  const handleGetEarlyJoiners = () => {
-    getEarlyJoinersList({ roomId: 123, sessionId: 456 });
   };
 
   const handleGetRoomCounts = async () => {
     try {
-      const counts = await subscribeRoomCountByGameType();
+      const counts = await subscribeRoomCountByGameType(1, 50);
       if (counts) {
         console.log('Room counts:', counts);
-        alert(`Total rooms: ${counts.total.total}, Lottery: ${counts.lottery.total}, RPS: ${counts.rps.total}`);
+        alert(`Total rooms: ${counts.total.total.count}, Lottery: ${counts.lottery.total.count}, RPS: ${counts.rps.total.count}`);
       } else {
         alert('Failed to get room counts');
       }
@@ -628,7 +610,7 @@ const GameRoomComponent: React.FC = () => {
 
       {roomCounts && (
         <div>
-          <h3>Room Counts</h3>
+          <h3>Room Counts (Page {roomCounts.pagination.page} of {roomCounts.pagination.totalPages})</h3>
           
           <div style={{ marginBottom: '20px' }}>
             <h4>Total</h4>
@@ -685,6 +667,7 @@ const GameRoomComponent: React.FC = () => {
           </div>
 
           <p>Last Updated: {roomCounts.total.lastUpdated}</p>
+          <p>Pagination: {roomCounts.pagination.total} total rooms, {roomCounts.pagination.hasNext ? 'Has Next' : 'No Next'}, {roomCounts.pagination.hasPrev ? 'Has Prev' : 'No Prev'}</p>
         </div>
       )}
 
@@ -705,14 +688,23 @@ const GameRoomComponent: React.FC = () => {
         </div>
       )}
 
-      {earlyJoiners && (
+      {roomParticipants && (
         <div>
-          <h3>Early Joiners</h3>
-          <p>Total Count: {earlyJoiners.totalCount}</p>
+          <h3>Room Participants ({roomParticipants.totalCount})</h3>
+          <p>Room ID: {roomParticipants.roomId}</p>
+          <p>Session ID: {roomParticipants.sessionId}</p>
           <ul>
-            {earlyJoiners.earlyJoiners.map((joiner, index) => (
+            {roomParticipants.participants.map((participant, index) => (
               <li key={index}>
-                {joiner.username} - {joiner.fullname} (Joined: {new Date(joiner.joined_at).toLocaleString()})
+                <strong>{participant.username}</strong> ({participant.fullname})
+                <br />
+                Wallet: {participant.wallet_address}
+                <br />
+                Amount: {participant.amount}
+                <br />
+                Joined: {new Date(participant.time_join).toLocaleString()}
+                <br />
+                Status: {participant.status}
               </li>
             ))}
           </ul>
@@ -721,8 +713,8 @@ const GameRoomComponent: React.FC = () => {
 
       <div>
         <button onClick={handleJoinRoom}>Join Room</button>
-        <button onClick={handleJoinRoomWithEarlyJoiners}>Join Room with Early Joiners</button>
-        <button onClick={handleGetEarlyJoiners}>Get Early Joiners List</button>
+        <button onClick={handleLeaveRoom}>Leave Room</button>
+        <button onClick={handleGetParticipants}>Get Participants</button>
         <button onClick={handleGetRoomCounts}>Get Room Counts</button>
       </div>
     </div>
@@ -1049,30 +1041,39 @@ Common error responses from server:
 ### 📡 WebSocket Events Handled
 
 **Client → Server:**
-- `subscribeRoomCountByGameType()` - Subscribe to room counts for all game types
+- `subscribeRoomCountByGameType({ page?: number, limit?: number })` - Subscribe to room counts with pagination
 - `subscribeCurrentSession(roomId: number)` - Subscribe to current session for a room
-- `getEarlyJoinersList({ roomId: number, sessionId?: number })` - Get early joiners list
-- `gameJoinRoom({ roomId: number, amount: number })` - Join room with amount
-- `joinRoomWithEarlyJoiners({ roomId: number, amount: number })` - Join room with early joiners and amount
+- `joinRoom({ roomId: number })` - Join room and get participants
+- `leaveRoom({ roomId: number })` - Leave room
+- `getCurrentRoomParticipants({ roomId: number })` - Get current room participants
 
 **Server → Client:**
 - `connected` - Connection established with user info
-- `gameRoomCounts` - Room counts data (all game types)
+- `gameRoomCounts` - Room counts data with pagination (all game types)
 - `currentSession` - Current session snapshot
 - `currentSessionUpdated` - Session status changed
-- `earlyJoinersList` - Early joiners list (from join room)
-- `earlyJoinersListResult` - Early joiners list (from get request)
-- `roomEarlyJoinersUpdated` - Early joiners updated (broadcast)
-- `gameJoinRoomResult` - Join room result
-- `joinRoomWithEarlyJoinersResult` - Join room with early joiners result
-- `gameJoinRoomUpdated` - Join room updated (broadcast)
+- `joinRoomResult` - Join room result with participants
+- `roomParticipantsUpdated` - Real-time participants update (broadcast)
+- `currentRoomParticipantsResult` - Current room participants result
 - `error` - Error occurred
 
 **Internal Events:**
 - `GameRoom.sessionStatusChanged` - Internal event triggered when session status changes (automatically broadcasts `gameRoomCounts`)
-- `GameRoom.joinRoom` - Internal event triggered when user joins room (broadcasts `gameJoinRoomUpdated`)
+- `GameRoom.joinRoom` - Internal event triggered when user joins room (broadcasts `roomParticipantsUpdated`)
 
 ## New Features Added
+
+### 🆕 **Real-time Participants Management**
+- **Join Room**: Join a room and immediately receive current participants list
+- **Leave Room**: Leave a room to stop receiving updates
+- **Get Participants**: Request current participants for any room
+- **Real-time Updates**: Automatic updates when participants join/leave
+- **High Performance**: Raw SQL queries for fastest possible response
+
+### 🆕 **Pagination Support**
+- **Room Counts**: Support for paginated room lists
+- **Configurable**: Customizable page size and page number
+- **Metadata**: Complete pagination information (total, hasNext, hasPrev)
 
 ### 🆕 **Enhanced Room Counts Structure**
 
@@ -1287,30 +1288,46 @@ The hook provides comprehensive error handling for:
 
 ## Updated Usage Examples
 
-### 🚀 **Cách sử dụng mới với room counts:**
+### 🚀 **Cách sử dụng mới với real-time participants:**
 
 ```typescript
 // Basic usage
 const { 
   joinRoom, 
-  joinRoomWithEarlyJoiners, 
+  leaveRoom, 
+  getCurrentRoomParticipants,
   subscribeRoomCountByGameType,
-  roomCounts 
+  roomCounts,
+  roomParticipants 
 } = useGameRoomWebSocket();
 
-// Join room with amount
-const result = await joinRoom({ roomId: 123, amount: 100 });
+// Join room and get participants immediately
+const result = await joinRoom({ roomId: 123 });
+if (result?.success) {
+  console.log('Joined room with participants:', result.participants);
+}
 
-// Join with early joiners and amount
-const result = await joinRoomWithEarlyJoiners({ roomId: 123, amount: 100 });
+// Leave room
+leaveRoom({ roomId: 123 });
 
-// Get room counts (all game types)
-const counts = await subscribeRoomCountByGameType();
+// Get current participants for a room
+const participants = await getCurrentRoomParticipants({ roomId: 123 });
+if (participants) {
+  console.log('Current participants:', participants.participants);
+}
+
+// Get room counts with pagination
+const counts = await subscribeRoomCountByGameType(1, 50);
 
 // Access counts by game type
 console.log('Lottery pending:', roomCounts?.lottery.pending.count);
 console.log('RPS running:', roomCounts?.rps.running.count);
 console.log('Total rooms:', roomCounts?.total.total.count);
+
+// Access pagination info
+console.log('Page:', roomCounts?.pagination.page);
+console.log('Total pages:', roomCounts?.pagination.totalPages);
+console.log('Has next:', roomCounts?.pagination.hasNext);
 
 // Access room objects
 console.log('Pending lottery rooms:', roomCounts?.lottery.pending.rooms);
@@ -1324,9 +1341,16 @@ roomCounts?.lottery.pending.rooms.forEach(room => {
 // Real-time updates
 useEffect(() => {
   if (isConnected) {
-    subscribeRoomCountByGameType();
+    subscribeRoomCountByGameType(1, 50);
   }
 }, [isConnected, subscribeRoomCountByGameType]);
+
+// Listen for real-time participant updates
+useEffect(() => {
+  if (roomParticipants) {
+    console.log('Participants updated:', roomParticipants);
+  }
+}, [roomParticipants]);
 ```
 
 ### 📊 **Room Counts Format:**
@@ -1498,6 +1522,14 @@ useEffect(() => {
       ]
     },
     lastUpdated: "2025-01-10T10:30:00.000Z"
+  },
+  pagination: {
+    page: 1,
+    limit: 50,
+    total: 5,
+    totalPages: 1,
+    hasNext: false,
+    hasPrev: false
   }
 }
 ```
@@ -1508,3 +1540,4 @@ useEffect(() => {
 - **Event-driven**: Uses `GameRoom.sessionStatusChanged` internal event
 - **Broadcast**: All connected clients receive updates via `gameRoomCounts` event
 - **No polling**: No need to manually refresh data
+
