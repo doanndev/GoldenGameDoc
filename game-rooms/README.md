@@ -768,6 +768,88 @@ POST /game-join-rooms/process-refund/123
 
 ---
 
+
+### 11. Get Joiners Refund
+**GET** `/game-join-rooms/joiners-refund`
+
+Lấy danh sách người tham gia đã được hoàn tiền cho một session cụ thể với phân trang.
+
+#### Query Parameters
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `session_id` | number | Yes | - | ID của session cần lấy danh sách hoàn tiền |
+| `page` | number | No | 1 | Số trang |
+| `limit` | number | No | 10 | Số lượng items per page |
+
+#### Example Request
+```
+GET /game-join-rooms/joiners-refund?session_id=123&page=1&limit=5
+```
+
+#### Success Response (200)
+```json
+{
+  "message": "Joiners refund fetched successfully",
+  "data": [
+    {
+      "id": 1,
+      "wallet_address": "0x1234567890abcdef...",
+      "amount": 98,
+      "time_join": "2024-01-01T00:00:00.000Z",
+      "status": "refunded",
+      "user": {
+        "id": 1,
+        "username": "user123"
+      }
+    },
+    {
+      "id": 2,
+      "wallet_address": "0xabcdef1234567890...",
+      "amount": 96,
+      "time_join": "2024-01-01T00:01:00.000Z",
+      "status": "refunded",
+      "user": {
+        "id": 2,
+        "username": "user456"
+      }
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 5,
+    "total": 2,
+    "totalPages": 1,
+    "hasNext": false,
+    "hasPrev": false
+  }
+}
+```
+
+#### Response Fields
+| Field | Type | Description |
+|-------|------|-------------|
+| `data` | array | Danh sách người tham gia đã được hoàn tiền |
+| `pagination` | object | Thông tin phân trang |
+
+#### Data Fields
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | number | ID của join record |
+| `wallet_address` | string | Địa chỉ ví của user |
+| `amount` | number | Số tiền đã được hoàn lại (sau khi trừ phí) |
+| `time_join` | string | Thời gian join ban đầu |
+| `status` | string | Trạng thái (refunded) |
+| `user` | object | Thông tin user |
+
+#### Error Responses
+| Status Code | Message | Description |
+|-------------|---------|-------------|
+| 400 | Session not found | Không tìm thấy session |
+| 401 | Unauthorized | Token không hợp lệ |
+| 500 | Error fetching joiners refund | Lỗi server |
+
+---
+
 ## Updated Business Logic
 
 ### Session Time Management with Auto-Creation
