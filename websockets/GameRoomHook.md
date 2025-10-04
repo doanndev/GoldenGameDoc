@@ -39,15 +39,49 @@ export const GAME_SESSION_STATUS = {
 export const GAME_JOIN_ROOM_STATUS = {
   EXECUTED: 'executed',
   VIEW: 'view',
+  CANCELLED: 'cancelled',
+  REFUNDED: 'refunded',
 } as const;
 
 // Types
+export interface GameRoomInfo {
+  id: number;
+  name: string;
+  symbol: string;
+  game_type_id: number | null;
+  owner_id: {
+    id: number;
+    username: string;
+  } | null;
+  current_session: {
+    id: number;
+    status: string;
+    time_start: string;
+    session: number;
+  } | null;
+}
+
 export interface GameTypeCounts {
-  pending: number;
-  running: number;
-  out: number;
-  end: number;
-  total: number;
+  pending: {
+    count: number;
+    rooms: GameRoomInfo[];
+  };
+  running: {
+    count: number;
+    rooms: GameRoomInfo[];
+  };
+  out: {
+    count: number;
+    rooms: GameRoomInfo[];
+  };
+  end: {
+    count: number;
+    rooms: GameRoomInfo[];
+  };
+  total: {
+    count: number;
+    rooms: GameRoomInfo[];
+  };
   lastUpdated: string;
 }
 
@@ -340,7 +374,7 @@ export const useGameRoomWebSocket = (
 
       socketRef.current?.on('gameRoomCounts', handleResponse);
       console.log('📊 Subscribing to room counts for all game types');
-      socketRef.current?.emit('subscribeRoomCountByGameType', 0); // 0 means all game types
+      socketRef.current?.emit('subscribeRoomCountByGameType'); // No parameter needed
 
       // Timeout after 5 seconds
       setTimeout(() => {
@@ -598,29 +632,56 @@ const GameRoomComponent: React.FC = () => {
           
           <div style={{ marginBottom: '20px' }}>
             <h4>Total</h4>
-            <p>Pending: {roomCounts.total.pending}</p>
-            <p>Running: {roomCounts.total.running}</p>
-            <p>Out: {roomCounts.total.out}</p>
-            <p>End: {roomCounts.total.end}</p>
-            <p>Total: {roomCounts.total.total}</p>
+            <p>Pending: {roomCounts.total.pending.count}</p>
+            <p>Running: {roomCounts.total.running.count}</p>
+            <p>Out: {roomCounts.total.out.count}</p>
+            <p>End: {roomCounts.total.end.count}</p>
+            <p>Total: {roomCounts.total.total.count}</p>
+            
+            <h5>Pending Rooms:</h5>
+            <ul>
+              {roomCounts.total.pending.rooms.map((room, index) => (
+                <li key={index}>
+                  {room.name} (ID: {room.id}) - Owner: {room.owner_id?.username || 'Unknown'}
+                </li>
+              ))}
+            </ul>
           </div>
 
           <div style={{ marginBottom: '20px' }}>
             <h4>Lottery</h4>
-            <p>Pending: {roomCounts.lottery.pending}</p>
-            <p>Running: {roomCounts.lottery.running}</p>
-            <p>Out: {roomCounts.lottery.out}</p>
-            <p>End: {roomCounts.lottery.end}</p>
-            <p>Total: {roomCounts.lottery.total}</p>
+            <p>Pending: {roomCounts.lottery.pending.count}</p>
+            <p>Running: {roomCounts.lottery.running.count}</p>
+            <p>Out: {roomCounts.lottery.out.count}</p>
+            <p>End: {roomCounts.lottery.end.count}</p>
+            <p>Total: {roomCounts.lottery.total.count}</p>
+            
+            <h5>Pending Lottery Rooms:</h5>
+            <ul>
+              {roomCounts.lottery.pending.rooms.map((room, index) => (
+                <li key={index}>
+                  {room.name} (ID: {room.id}) - Owner: {room.owner_id?.username || 'Unknown'}
+                </li>
+              ))}
+            </ul>
           </div>
 
           <div style={{ marginBottom: '20px' }}>
             <h4>RPS</h4>
-            <p>Pending: {roomCounts.rps.pending}</p>
-            <p>Running: {roomCounts.rps.running}</p>
-            <p>Out: {roomCounts.rps.out}</p>
-            <p>End: {roomCounts.rps.end}</p>
-            <p>Total: {roomCounts.rps.total}</p>
+            <p>Pending: {roomCounts.rps.pending.count}</p>
+            <p>Running: {roomCounts.rps.running.count}</p>
+            <p>Out: {roomCounts.rps.out.count}</p>
+            <p>End: {roomCounts.rps.end.count}</p>
+            <p>Total: {roomCounts.rps.total.count}</p>
+            
+            <h5>Pending RPS Rooms:</h5>
+            <ul>
+              {roomCounts.rps.pending.rooms.map((room, index) => (
+                <li key={index}>
+                  {room.name} (ID: {room.id}) - Owner: {room.owner_id?.username || 'Unknown'}
+                </li>
+              ))}
+            </ul>
           </div>
 
           <p>Last Updated: {roomCounts.total.lastUpdated}</p>
@@ -766,33 +827,60 @@ const GameRoomsPage: React.FC = () => {
           <div style={{ marginBottom: '20px' }}>
             <h3>Total</h3>
             <div style={{ display: 'flex', gap: '20px' }}>
-              <div>Pending: {roomCounts.total.pending}</div>
-              <div>Running: {roomCounts.total.running}</div>
-              <div>Out: {roomCounts.total.out}</div>
-              <div>End: {roomCounts.total.end}</div>
-              <div>Total: {roomCounts.total.total}</div>
+              <div>Pending: {roomCounts.total.pending.count}</div>
+              <div>Running: {roomCounts.total.running.count}</div>
+              <div>Out: {roomCounts.total.out.count}</div>
+              <div>End: {roomCounts.total.end.count}</div>
+              <div>Total: {roomCounts.total.total.count}</div>
+            </div>
+            
+            <h4>Pending Rooms:</h4>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+              {roomCounts.total.pending.rooms.map((room, index) => (
+                <div key={index} style={{ padding: '5px', border: '1px solid #ccc', borderRadius: '4px' }}>
+                  {room.name} (ID: {room.id})
+                </div>
+              ))}
             </div>
           </div>
 
           <div style={{ marginBottom: '20px' }}>
             <h3>Lottery</h3>
             <div style={{ display: 'flex', gap: '20px' }}>
-              <div>Pending: {roomCounts.lottery.pending}</div>
-              <div>Running: {roomCounts.lottery.running}</div>
-              <div>Out: {roomCounts.lottery.out}</div>
-              <div>End: {roomCounts.lottery.end}</div>
-              <div>Total: {roomCounts.lottery.total}</div>
+              <div>Pending: {roomCounts.lottery.pending.count}</div>
+              <div>Running: {roomCounts.lottery.running.count}</div>
+              <div>Out: {roomCounts.lottery.out.count}</div>
+              <div>End: {roomCounts.lottery.end.count}</div>
+              <div>Total: {roomCounts.lottery.total.count}</div>
+            </div>
+            
+            <h4>Pending Lottery Rooms:</h4>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+              {roomCounts.lottery.pending.rooms.map((room, index) => (
+                <div key={index} style={{ padding: '5px', border: '1px solid #ccc', borderRadius: '4px' }}>
+                  {room.name} (ID: {room.id})
+                </div>
+              ))}
             </div>
           </div>
 
           <div style={{ marginBottom: '20px' }}>
             <h3>RPS</h3>
             <div style={{ display: 'flex', gap: '20px' }}>
-              <div>Pending: {roomCounts.rps.pending}</div>
-              <div>Running: {roomCounts.rps.running}</div>
-              <div>Out: {roomCounts.rps.out}</div>
-              <div>End: {roomCounts.rps.end}</div>
-              <div>Total: {roomCounts.rps.total}</div>
+              <div>Pending: {roomCounts.rps.pending.count}</div>
+              <div>Running: {roomCounts.rps.running.count}</div>
+              <div>Out: {roomCounts.rps.out.count}</div>
+              <div>End: {roomCounts.rps.end.count}</div>
+              <div>Total: {roomCounts.rps.total.count}</div>
+            </div>
+            
+            <h4>Pending RPS Rooms:</h4>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+              {roomCounts.rps.pending.rooms.map((room, index) => (
+                <div key={index} style={{ padding: '5px', border: '1px solid #ccc', borderRadius: '4px' }}>
+                  {room.name} (ID: {room.id})
+                </div>
+              ))}
             </div>
           </div>
         </div>
@@ -961,7 +1049,7 @@ Common error responses from server:
 ### 📡 WebSocket Events Handled
 
 **Client → Server:**
-- `subscribeRoomCountByGameType(gt_id: number)` - Subscribe to room counts (0 = all game types)
+- `subscribeRoomCountByGameType()` - Subscribe to room counts for all game types
 - `subscribeCurrentSession(roomId: number)` - Subscribe to current session for a room
 - `getEarlyJoinersList({ roomId: number, sessionId?: number })` - Get early joiners list
 - `gameJoinRoom({ roomId: number, amount: number })` - Join room with amount
@@ -982,6 +1070,97 @@ Common error responses from server:
 
 **Internal Events:**
 - `GameRoom.sessionStatusChanged` - Internal event triggered when session status changes (automatically broadcasts `gameRoomCounts`)
+- `GameRoom.joinRoom` - Internal event triggered when user joins room (broadcasts `gameJoinRoomUpdated`)
+
+## New Features Added
+
+### 🆕 **Enhanced Room Counts Structure**
+
+The room counts now include both count and room IDs for better tracking:
+
+```typescript
+interface GameRoomInfo {
+  id: number;
+  name: string;
+  symbol: string;
+  game_type_id: number | null;
+  owner_id: {
+    id: number;
+    username: string;
+  } | null;
+  current_session: {
+    id: number;
+    status: string;
+    time_start: string;
+    session: number;
+  } | null;
+}
+
+interface GameTypeCounts {
+  pending: {
+    count: number;           // Number of rooms
+    rooms: GameRoomInfo[];   // Array of room objects
+  };
+  running: {
+    count: number;
+    rooms: GameRoomInfo[];
+  };
+  out: {
+    count: number;
+    rooms: GameRoomInfo[];
+  };
+  end: {
+    count: number;
+    rooms: GameRoomInfo[];
+  };
+  total: {
+    count: number;
+    rooms: GameRoomInfo[];
+  };
+  lastUpdated: string;
+}
+```
+
+### 🆕 **New Join Room Status**
+
+Added support for new join room statuses:
+
+```typescript
+export const GAME_JOIN_ROOM_STATUS = {
+  EXECUTED: 'executed',    // User is actually participating
+  VIEW: 'view',            // User is only spectating
+  CANCELLED: 'cancelled',  // User cancelled their join
+  REFUNDED: 'refunded',    // User received refund for expired session
+} as const;
+```
+
+### 🆕 **Real-time Join Room Updates**
+
+When users join rooms, all connected clients receive real-time updates:
+
+```typescript
+// Listen for join room updates
+socket.on('gameJoinRoomUpdated', (data) => {
+  console.log('Someone joined room:', data.roomId);
+  console.log('Updated joiners list:', data.joinList);
+});
+```
+
+### 🆕 **Enhanced Early Joiners**
+
+The early joiners list now includes more detailed information and supports pagination:
+
+```typescript
+interface EarlyJoiner {
+  user_id: number;
+  username: string;
+  fullname: string;
+  avatar: string;
+  joined_at: string;
+  amount: number;
+  status: string;
+}
+```
 
 ## Constants Usage
 
@@ -1129,9 +1308,18 @@ const result = await joinRoomWithEarlyJoiners({ roomId: 123, amount: 100 });
 const counts = await subscribeRoomCountByGameType();
 
 // Access counts by game type
-console.log('Lottery pending:', roomCounts?.lottery.pending);
-console.log('RPS running:', roomCounts?.rps.running);
-console.log('Total rooms:', roomCounts?.total.total);
+console.log('Lottery pending:', roomCounts?.lottery.pending.count);
+console.log('RPS running:', roomCounts?.rps.running.count);
+console.log('Total rooms:', roomCounts?.total.total.count);
+
+// Access room objects
+console.log('Pending lottery rooms:', roomCounts?.lottery.pending.rooms);
+console.log('Running RPS rooms:', roomCounts?.rps.running.rooms);
+
+// Access specific room info
+roomCounts?.lottery.pending.rooms.forEach(room => {
+  console.log(`Room ${room.id}: ${room.name} by ${room.owner_id?.username}`);
+});
 
 // Real-time updates
 useEffect(() => {
@@ -1147,27 +1335,168 @@ useEffect(() => {
 // Response format
 {
   lottery: {
-    pending: 5,
-    running: 3,
-    out: 2,
-    end: 10,
-    total: 20,
+    pending: {
+      count: 2,
+      rooms: [
+        {
+          id: 1,
+          name: "Lottery Room 1",
+          symbol: "GOLD",
+          game_type_id: 1,
+          owner_id: {
+            id: 123,
+            username: "player1"
+          },
+          current_session: {
+            id: 456,
+            status: "pending",
+            time_start: "2025-01-10T10:00:00.000Z",
+            session: 1759559454288
+          }
+        },
+        {
+          id: 2,
+          name: "Lottery Room 2", 
+          symbol: "SILVER",
+          game_type_id: 1,
+          owner_id: {
+            id: 124,
+            username: "player2"
+          },
+          current_session: {
+            id: 457,
+            status: "pending",
+            time_start: "2025-01-10T10:05:00.000Z",
+            session: 1759559454289
+          }
+        }
+      ]
+    },
+    running: {
+      count: 1,
+      rooms: [
+        {
+          id: 3,
+          name: "Lottery Room 3",
+          symbol: "GOLD",
+          game_type_id: 1,
+          owner_id: {
+            id: 125,
+            username: "player3"
+          },
+          current_session: {
+            id: 458,
+            status: "running",
+            time_start: "2025-01-10T09:55:00.000Z",
+            session: 1759559454287
+          }
+        }
+      ]
+    },
+    out: {
+      count: 0,
+      rooms: []
+    },
+    end: {
+      count: 1,
+      rooms: [
+        {
+          id: 4,
+          name: "Lottery Room 4",
+          symbol: "GOLD",
+          game_type_id: 1,
+          owner_id: {
+            id: 126,
+            username: "player4"
+          },
+          current_session: {
+            id: 459,
+            status: "end",
+            time_start: "2025-01-10T09:50:00.000Z",
+            session: 1759559454286
+          }
+        }
+      ]
+    },
+    total: {
+      count: 4,
+      rooms: [
+        // All rooms from pending, running, out, end
+      ]
+    },
     lastUpdated: "2025-01-10T10:30:00.000Z"
   },
   rps: {
-    pending: 2,
-    running: 1,
-    out: 1,
-    end: 6,
-    total: 10,
+    pending: {
+      count: 1,
+      rooms: [
+        {
+          id: 5,
+          name: "RPS Room 1",
+          symbol: "ROCK",
+          game_type_id: 2,
+          owner_id: {
+            id: 127,
+            username: "player5"
+          },
+          current_session: {
+            id: 460,
+            status: "pending",
+            time_start: "2025-01-10T10:10:00.000Z",
+            session: 1759559454290
+          }
+        }
+      ]
+    },
+    running: {
+      count: 0,
+      rooms: []
+    },
+    out: {
+      count: 0,
+      rooms: []
+    },
+    end: {
+      count: 0,
+      rooms: []
+    },
+    total: {
+      count: 1,
+      rooms: [
+        // All RPS rooms
+      ]
+    },
     lastUpdated: "2025-01-10T10:30:00.000Z"
   },
   total: {
-    pending: 7,
-    running: 4,
-    out: 3,
-    end: 16,
-    total: 30,
+    pending: {
+      count: 3,
+      rooms: [
+        // All pending rooms from lottery + rps
+      ]
+    },
+    running: {
+      count: 1,
+      rooms: [
+        // All running rooms from lottery + rps
+      ]
+    },
+    out: {
+      count: 0,
+      rooms: []
+    },
+    end: {
+      count: 1,
+      rooms: [
+        // All end rooms from lottery + rps
+      ]
+    },
+    total: {
+      count: 5,
+      rooms: [
+        // All rooms from all game types
+      ]
+    },
     lastUpdated: "2025-01-10T10:30:00.000Z"
   }
 }
