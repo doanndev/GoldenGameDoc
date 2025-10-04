@@ -552,6 +552,297 @@ GET /game-join-rooms/check-new-session?room_id=1
 
 ---
 
+
+### 8. Get Current Session Participants
+**GET** `/game-join-rooms/by-room`
+
+Lấy danh sách người tham gia của session hiện tại mới nhất của room với phân trang.
+
+#### Query Parameters
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `room_id` | number | Yes | - | ID của phòng game |
+| `page` | number | No | 1 | Số trang |
+| `limit` | number | No | 10 | Số lượng items per page |
+
+#### Example Request
+```
+GET /game-join-rooms/by-room?room_id=123&page=1&limit=5
+```
+
+#### Success Response (200)
+```json
+{
+  "message": "Current session participants fetched successfully",
+  "data": [
+    {
+      "id": 1,
+      "wallet_address": "0x1234567890abcdef...",
+      "amount": 100,
+      "time_join": "2024-01-01T00:00:00.000Z",
+      "status": "executed",
+      "user": {
+        "id": 1,
+        "username": "user123"
+      }
+    }
+  ],
+  "currentSession": {
+    "id": 456,
+    "session": "1759559454288",
+    "time_start": "2024-01-01T00:00:00.000Z",
+    "status": "pending",
+    "can_join": true
+  },
+  "pagination": {
+    "page": 1,
+    "limit": 5,
+    "total": 3,
+    "totalPages": 1,
+    "hasNext": false,
+    "hasPrev": false
+  }
+}
+```
+
+#### Response Fields
+| Field | Type | Description |
+|-------|------|-------------|
+| `data` | array | Danh sách người tham gia |
+| `currentSession` | object | Thông tin session hiện tại |
+| `pagination` | object | Thông tin phân trang |
+
+#### Error Responses
+| Status Code | Message | Description |
+|-------------|---------|-------------|
+| 400 | No current session found for this room | Không tìm thấy session hiện tại |
+| 401 | Unauthorized | Token không hợp lệ |
+| 500 | Error fetching current session participants | Lỗi server |
+
+---
+
+### 9. Get Expired Sessions with Participants
+**GET** `/game-join-rooms/expired-sessions`
+
+Lấy danh sách các session đã hết hạn (không đủ người tham gia sau 3 phút) và thông tin phí penalty.
+
+#### Query Parameters
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `room_id` | number | Yes | - | ID của phòng game |
+| `page` | number | No | 1 | Số trang |
+| `limit` | number | No | 10 | Số lượng items per page |
+
+#### Example Request
+```
+GET /game-join-rooms/expired-sessions?room_id=123&page=1&limit=5
+```
+
+#### Success Response (200)
+```json
+{
+  "data": [
+    {
+      "participants": [
+        {
+          "id": 1,
+          "wallet_address": "0x1234567890abcdef...",
+          "original_amount": 100,
+          "penalty_amount": 2,
+          "refund_amount": 98,
+          "time_join": "2024-01-01T00:00:00.000Z",
+          "status": "executed",
+          "user": {
+            "id": 1,
+            "username": "user123"
+          }
+        }
+      ],
+      "financial_summary": {
+        "total_original_amount": 200,
+        "total_penalty_amount": 4,
+        "total_refund_amount": 196,
+        "penalty_rate": 0.02
+      }
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 5,
+    "total": 1,
+    "totalPages": 1,
+    "hasNext": false,
+    "hasPrev": false
+  }
+}
+```
+
+#### Response Fields
+| Field | Type | Description |
+|-------|------|-------------|
+| `participants` | array | Danh sách người tham gia với thông tin penalty |
+| `financial_summary` | object | Tổng kết tài chính |
+| `pagination` | object | Thông tin phân trang |
+
+#### Financial Summary Fields
+| Field | Type | Description |
+|-------|------|-------------|
+| `total_original_amount` | number | Tổng số tiền gốc |
+| `total_penalty_amount` | number | Tổng phí penalty (2%) |
+| `total_refund_amount` | number | Tổng số tiền hoàn lại |
+| `penalty_rate` | number | Tỷ lệ phí penalty (0.02 = 2%) |
+
+#### Error Responses
+| Status Code | Message | Description |
+|-------------|---------|-------------|
+| 400 | No expired sessions found for this room | Không tìm thấy session hết hạn |
+| 401 | Unauthorized | Token không hợp lệ |
+| 500 | Error fetching expired sessions with participants | Lỗi server |
+
+---
+
+### 10. Process Expired Session Refund
+**POST** `/game-join-rooms/process-refund/:session_id`
+
+Xử lý trừ phí 2% và hoàn tiền cho session đã hết hạn.
+
+#### Path Parameters
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `session_id` | number | Yes | ID của session cần xử lý hoàn tiền |
+
+#### Example Request
+```
+POST /game-join-rooms/process-refund/123
+```
+
+#### Success Response (200)
+```json
+{
+  "message": "Expired session refund processed successfully",
+  "data": {
+    "session": {
+      "id": 123,
+      "session": "1759559454288",
+      "time_start": "2024-01-01T00:00:00.000Z",
+      "status": "out"
+    },
+    "processed_participants": [
+      {
+        "id": 1,
+        "wallet_address": "0x1234567890abcdef...",
+        "original_amount": 100,
+        "penalty_amount": 2,
+        "refund_amount": 98,
+        "user": {
+          "id": 1,
+          "username": "user123"
+        }
+      }
+    ],
+    "financial_summary": {
+      "total_original_amount": 200,
+      "total_penalty_amount": 4,
+      "total_refund_amount": 196,
+      "penalty_rate": 0.02
+    }
+  }
+}
+```
+
+#### Response Fields
+| Field | Type | Description |
+|-------|------|-------------|
+| `session` | object | Thông tin session |
+| `processed_participants` | array | Danh sách người tham gia đã xử lý |
+| `financial_summary` | object | Tổng kết tài chính |
+
+#### Error Responses
+| Status Code | Message | Description |
+|-------------|---------|-------------|
+| 400 | Session not found | Không tìm thấy session |
+| 400 | Session is not expired | Session chưa hết hạn |
+| 400 | No participants found for this session | Không có người tham gia |
+| 401 | Unauthorized | Token không hợp lệ |
+| 500 | Error processing expired session refund | Lỗi server |
+
+---
+
+## Updated Business Logic
+
+### Session Time Management with Auto-Creation
+- Khi tạo session mới, `time_start` được set = thời gian hiện tại + 3 phút
+- User chỉ có thể join trong vòng 3 phút sau khi session bắt đầu
+- **Mới**: Sau 3 phút, nếu số người tham gia < số giải thưởng → Session bị cancel và tự động tạo session mới sau 10 giây
+- Sau 3 phút, nếu số người tham gia >= số giải thưởng → Session tiếp tục
+
+### Penalty and Refund System
+- **Penalty Rate**: 2% cho mỗi người tham gia trong session hết hạn
+- **Refund Amount**: Số tiền gốc - phí penalty
+- **Status Update**: Cập nhật status thành `REFUNDED` sau khi xử lý
+- **Amount Update**: Cập nhật amount thành số tiền được hoàn lại
+
+### Auto Session Creation Flow
+1. **Session hết hạn** → Đánh dấu session cũ là `OUT`
+2. **Delay 10 giây** → Chờ 10 giây trước khi tạo session mới
+3. **Tạo session mới** → Session mới với status `PENDING`
+4. **User có thể join** → User có thể join session mới
+
+### Room Status Flow
+1. **WAIT** → User có thể join
+2. **RUN** → Session đang chạy, không cho join mới
+3. **INACTIVE** → Phòng không hoạt động
+4. **DELETE** → Phòng đã bị xóa
+
+### Session Status Flow
+1. **PENDING** → Đang chờ người tham gia
+2. **RUNNING** → Session đang chạy
+3. **OUT** → Session hết hạn hoặc bị cancel
+4. **END** → Session đã kết thúc
+
+### Join Room Status Flow
+1. **EXECUTED** → User tham gia thực sự (trong 3 phút)
+2. **VIEW** → User chỉ xem (sau 3 phút)
+3. **CANCELLED** → User đã hủy
+4. **REFUNDED** → User đã được hoàn tiền
+
+---
+
+## Updated Usage Examples
+
+### 8. Get Current Session Participants
+```bash
+curl -X GET "{{BASE_URL}}/game-join-rooms/by-room?room_id=123&page=1&limit=5" \
+  -H "Authorization: Bearer <token>"
+```
+
+### 9. Get Expired Sessions
+```bash
+curl -X GET "{{BASE_URL}}/game-join-rooms/expired-sessions?room_id=123&page=1&limit=5" \
+  -H "Authorization: Bearer <token>"
+```
+
+### 10. Process Refund
+```bash
+curl -X POST "{{BASE_URL}}/game-join-rooms/process-refund/123" \
+  -H "Authorization: Bearer <token>"
+```
+
+### 11. Complete Penalty Processing Flow
+```bash
+# 1. Get expired sessions
+curl -X GET "{{BASE_URL}}/game-join-rooms/expired-sessions?room_id=123"
+
+# 2. Process refund for specific session
+curl -X POST "{{BASE_URL}}/game-join-rooms/process-refund/123"
+
+# 3. Verify participants status updated
+curl -X GET "{{BASE_URL}}/game-join-rooms/by-room?room_id=123"
+```
+
+---
+
+
 ## Data Models
 
 ### GameRoomStatus Enum
