@@ -342,11 +342,8 @@ export const useGameRoomWebSocket = (
       console.log('📊 Subscribing to room counts');
       socketRef.current?.emit('subscribeRoomCountByGameType');
 
-      // Timeout after 5 seconds
-      setTimeout(() => {
-        socketRef.current?.off('gameRoomCounts', handleResponse);
-        resolve(null);
-      }, 5000);
+      socketRef.current?.off('gameRoomCounts', handleResponse);
+      resolve(null);
     });
   }, []);
 
@@ -374,13 +371,10 @@ export const useGameRoomWebSocket = (
       console.log('🚪 Joining room:', payload);
       socketRef.current!.emit('joinRoom', payload);
 
-      // Timeout after 10 seconds
-      setTimeout(() => {
-        if (joinRoomPromiseRef.current) {
-          joinRoomPromiseRef.current.resolve(null);
-          joinRoomPromiseRef.current = null;
-        }
-      }, 10000);
+      if (joinRoomPromiseRef.current) {
+        joinRoomPromiseRef.current.resolve(null);
+        joinRoomPromiseRef.current = null;
+      }
     });
   }, []);
 
@@ -414,11 +408,8 @@ export const useGameRoomWebSocket = (
       console.log('👥 Getting current room participants:', payload);
       socketRef.current?.emit('getCurrentRoomParticipants', payload);
 
-      // Timeout after 5 seconds
-      setTimeout(() => {
-        socketRef.current?.off('currentRoomParticipantsResult', handleResponse);
-        resolve(null);
-      }, 5000);
+      socketRef.current?.off('currentRoomParticipantsResult', handleResponse);
+      resolve(null);
     });
   }, []);
 
