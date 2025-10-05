@@ -86,7 +86,9 @@ GET /game-join-rooms/joiners?room_id=123&page=1&limit=10
             "status": "executed",
             "user": {
                 "id": 142859,
-                "username": "tranthe"
+                "username": "tranthe",
+                "fullname": "Trần Tiến Thế",
+                "avatar": "https://www.shutterstock.com/image-photo/indoor-photo-hyperdetailed-realistic-baby-260nw-2474189777.jpg"
             }
         },
         {
@@ -98,16 +100,17 @@ GET /game-join-rooms/joiners?room_id=123&page=1&limit=10
             "status": "executed",
             "user": {
                 "id": 142862,
-                "username": "Dautay"
+                "username": "Dautay",
+                "fullname": "Dautay",
+                "avatar": "https://api.telegram.org/file/bot8216959304:AAG4GJ6Wu_zwDh_ejYJK6OV_1TGCswTnZyM/photos/file_0.jpg?inline=1"
             }
         }
     ],
+    "totalAmount": 61,
     "currentSession": {
         "id": 341300,
         "session": "1759592019466",
-        "time_start": "2025-10-04T15:36:39.466Z",
-        "status": "running",
-        "can_join": false
+        "time_start": "2025-10-04T15:36:39.466Z"
     },
     "pagination": {
         "page": 1,
