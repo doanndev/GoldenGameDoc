@@ -1181,6 +1181,7 @@ NEXT_PUBLIC_WEBSOCKET_URL=http://localhost:8008
    - Cross-room validation with detailed room info
    - Promise-based API for async operations
    - Timeout handling
+   - **🆕 Automatic status broadcasting when sessions change**
 
 5. **Error Handling**
    - Comprehensive error states
@@ -1199,8 +1200,8 @@ NEXT_PUBLIC_WEBSOCKET_URL=http://localhost:8008
 ## Performance Considerations
 
 - **Optimized Queries**: Server uses TypeORM QueryBuilder for better performance
-- **Caching**: Server implements 2-second cache for room counts
-- **Debouncing**: Server uses 100ms debouncing for broadcasts and 500ms for subscriptions
+- **Caching**: Server implements 2-second cache for room counts (`CACHE_TTL = 2000ms`)
+- **Debouncing**: Server uses 100ms debouncing for broadcasts (`BROADCAST_DEBOUNCE = 100ms`) and 500ms for subscriptions (`SUBSCRIPTION_DEBOUNCE = 500ms`)
 - **Real-time Updates**: Automatic updates without polling
 - **Memory Management**: Automatic cleanup on unmount
 - **Promise-based**: Efficient async operations with timeout handling
@@ -1209,6 +1210,8 @@ NEXT_PUBLIC_WEBSOCKET_URL=http://localhost:8008
 - **User Validation**: Prevents duplicate room participation
 - **Cross-Room Validation**: Server-side validation to prevent multiple room participation
 - **Real-time Error Handling**: Immediate feedback for join failures
+- **🆕 Automatic Status Broadcasting**: Real-time notifications when sessions change, eliminating manual status checks
+- **Connection Optimization**: Supports both WebSocket and polling transports for better compatibility
 
 ## Error Handling
 
@@ -1419,6 +1422,58 @@ The `joinRoom` method requires both `roomId` and `sessionId` parameters to prope
 - **Real-time Updates**: Receive live participant updates
 - **Room Navigation**: Join multiple rooms for different sessions
 
+## Automatic User Status Updates
+
+### 🚀 **New Feature: Automatic Status Broadcasting**
+The WebSocket gateway now automatically broadcasts user room status updates when session status changes, eliminating the need for clients to manually check their status.
+
+#### **How it works:**
+1. **Event Trigger**: When any session status changes (PENDING → RUNNING → END/OUT)
+2. **Automatic Detection**: Server identifies all users participating in that session
+3. **Status Update**: Server automatically broadcasts updated status to all affected users
+4. **Real-time Notification**: Users receive immediate notifications about their room availability
+
+#### **Events Automatically Emitted:**
+- **`userCurrentRoomStatusResult`**: Updated user room status
+- **`checkJoinerInRoomResult`**: Notification when user can join other rooms
+
+#### **Automatic Notifications:**
+```typescript
+// When session ends or expires
+{
+  success: true,
+  roomId: 0, // General notification
+  sessionId: 0,
+  isAlreadyInRoom: false,
+  currentRoom: null,
+  message: "Session in room 'RoomName' has ended. You can now join other rooms."
+}
+
+// When user becomes free to join any room
+{
+  success: true,
+  roomId: 0, // General notification
+  sessionId: 0,
+  isAlreadyInRoom: false,
+  currentRoom: null,
+  message: "You are now free to join any room."
+}
+```
+
+#### **Benefits:**
+- ✅ **No Manual Checking**: Users don't need to manually check their status
+- ✅ **Real-time Updates**: Immediate notifications when sessions change
+- ✅ **Better UX**: Users know instantly when they can join other rooms
+- ✅ **Reduced API Calls**: Eliminates need for frequent status checks
+
+#### **Technical Implementation:**
+- **Event Trigger**: `@OnEvent('GameRoom.sessionStatusChanged')` automatically calls `broadcastUserRoomStatusUpdate()`
+- **Participant Detection**: Queries all users with `EXECUTED` status in the affected session
+- **Client Mapping**: Maps user IDs to connected WebSocket clients using `connectedClients` Map
+- **Status Broadcasting**: Emits `userCurrentRoomStatusResult` and `checkJoinerInRoomResult` events
+- **Performance Optimized**: Uses TypeORM QueryBuilder for efficient database queries
+- **Error Handling**: Comprehensive try-catch blocks with detailed logging
+
 ## User Current Room Status
 
 ### 🔍 **New Feature: getUserCurrentRoomStatus**
@@ -1458,6 +1513,51 @@ This feature allows clients to check the current room status of a user without s
 - **Session Expiration**: Check if current session has expired
 - **Room Navigation**: Allow user to return to their current room
 
+### 🎯 **Using Automatic Status Broadcasting**
+
+#### **Client-side Implementation:**
+```typescript
+const { userCurrentRoomStatus, checkJoinerInRoom } = useGameRoomWebSocket();
+
+// Listen for automatic status updates
+useEffect(() => {
+  if (userCurrentRoomStatus) {
+    if (userCurrentRoomStatus.isAlreadyInRoom) {
+      console.log('User is in room:', userCurrentRoomStatus.currentRoom);
+      
+      // Check if session has expired
+      if (userCurrentRoomStatus.currentRoom?.isExpired) {
+        console.log('Session expired, user can join other rooms');
+        // Update UI to show user can join other rooms
+      }
+    } else {
+      console.log('User is free to join any room');
+      // Update UI to show all available rooms
+    }
+  }
+}, [userCurrentRoomStatus]);
+
+// Listen for automatic join notifications
+useEffect(() => {
+  // This will be automatically triggered when session status changes
+  const handleAutomaticNotification = (data) => {
+    if (data.message?.includes('can now join other rooms')) {
+      console.log('Automatic notification:', data.message);
+      // Update UI to enable room joining
+    }
+  };
+  
+  // The hook automatically handles these events
+}, []);
+```
+
+#### **Benefits for Developers:**
+- ✅ **No Polling Required**: No need to periodically check user status
+- ✅ **Immediate Updates**: Users get instant notifications when sessions change
+- ✅ **Reduced Complexity**: Eliminates need for manual status checking logic
+- ✅ **Better Performance**: Reduces unnecessary API calls
+- ✅ **Improved UX**: Users always know their current status
+
 ## Session Status Filtering
 
 ### 🚫 **Excluded Status: OUT**
@@ -1487,16 +1587,22 @@ This hook and the underlying WebSocket gateway **exclude sessions with `out` sta
 - **Efficient Data Mapping**: Proper entity relationships
 - **Reduced Database Load**: Optimized queries with proper joins
 - **Filtered Sessions**: Only processes `pending`, `running`, `end` sessions (excludes `out`)
+- **Advanced Caching**: 2-second cache TTL for room counts with automatic invalidation
+- **Smart Debouncing**: 100ms broadcast debouncing and 500ms subscription debouncing
+- **Connection Flexibility**: Supports both WebSocket and polling transports
 
 ### 🆕 **Enhanced Real-time Updates**
 - **Automatic Broadcasting**: Room counts and participants update automatically
 - **Event-driven**: Uses internal events for real-time updates
 - **No Polling**: Eliminates need for manual refresh
-- **Debounced Updates**: Prevents excessive broadcasts
+- **Debounced Updates**: Prevents excessive broadcasts (100ms debouncing)
 - **Session Expiration**: Built-in 3-minute session timeout checking
 - **User Validation**: Prevents duplicate room participation
 - **Cross-Room Validation**: Server-side validation with real-time feedback
 - **Comprehensive Join Validation**: Detailed validation with clear messages
+- **🆕 Automatic Status Broadcasting**: Real-time user status updates when sessions change
+- **Smart Cache Management**: 2-second cache with automatic invalidation on changes
+- **Connection State Management**: Tracks connected clients and user mappings
 
 ### 🆕 **Improved Error Handling**
 - **Comprehensive Validation**: Server-side validation for all operations
@@ -1507,3 +1613,4 @@ This hook and the underlying WebSocket gateway **exclude sessions with `out` sta
 - **User Status Validation**: Prevents invalid room participation
 - **Cross-Room Validation Detection**: Real-time validation with immediate feedback
 - **Comprehensive Join Validation**: Detailed validation with clear messages
+- **🆕 Automatic Status Broadcasting**: Real-time notifications when sessions change, eliminating manual status checks
