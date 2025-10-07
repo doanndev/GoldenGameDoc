@@ -149,6 +149,24 @@ export interface CheckJoinerResult {
   error?: string;
 }
 
+export interface JoinRoomSuccessResult {
+  success: boolean;
+  roomId: number;
+  sessionId: number;
+  joined: boolean;
+  message: string;
+  timestamp: string;
+}
+
+export interface JoinRoomErrorResult {
+  success: boolean;
+  roomId: number;
+  sessionId: number;
+  joined: boolean;
+  message: string;
+  timestamp: string;
+}
+
 // Hook options
 export interface UseGameRoomWebSocketOptions {
   serverUrl?: string;
@@ -315,6 +333,16 @@ export const useGameRoomWebSocket = (
           checkJoinerPromiseRef.current.resolve(data);
           checkJoinerPromiseRef.current = null;
         }
+      });
+
+      socket.on('joinRoomSuccess', (data: JoinRoomSuccessResult) => {
+        console.log('✅ Join room success:', data);
+        // Handle successful room join
+      });
+
+      socket.on('joinRoomError', (data: JoinRoomErrorResult) => {
+        console.log('❌ Join room error:', data);
+        // Handle room join error (duplicate join, validation failed, etc.)
       });
 
       // Error handling
@@ -1014,6 +1042,8 @@ NEXT_PUBLIC_WEBSOCKET_URL=http://localhost:8008
 | `currentSession` | `CurrentSessionSnapshot` | Current session snapshot |
 | `currentSessionUpdated` | `CurrentSessionSnapshot` | Session status changed |
 | `joinRoomResult` | `JoinRoomResult` | Join room result with participants |
+| `joinRoomSuccess` | `JoinRoomSuccessResult` | Join room success confirmation |
+| `joinRoomError` | `JoinRoomErrorResult` | Join room error (duplicate join, validation failed) |
 | `roomParticipantsUpdated` | `RoomParticipants` | Real-time participants update (broadcast) |
 | `currentRoomParticipantsResult` | `RoomParticipants` | Current room participants result |
 | `checkJoinerInRoomResult` | `{ success: boolean, roomId: number, sessionId: number, error?: string }` | Result of joiner check |
@@ -1047,6 +1077,8 @@ NEXT_PUBLIC_WEBSOCKET_URL=http://localhost:8008
    - Real-time participant updates
    - Leave room functionality
    - Check if user is already in a room
+   - Duplicate join prevention
+   - Join room success/error handling
    - Promise-based API for async operations
    - Timeout handling
 
@@ -1075,6 +1107,8 @@ NEXT_PUBLIC_WEBSOCKET_URL=http://localhost:8008
 - **Filtered Data**: Only processes sessions with `pending`, `running`, `end` status (excludes `out`)
 - **Session Validation**: Built-in session expiration checking (3-minute timeout)
 - **User Validation**: Prevents duplicate room participation
+- **Duplicate Join Prevention**: Server-side validation to prevent multiple joins
+- **Real-time Error Handling**: Immediate feedback for join failures
 
 ## Error Handling
 
@@ -1084,6 +1118,8 @@ The hook provides comprehensive error handling for:
 - Join room failures
 - Session expiration errors
 - User validation errors
+- Duplicate join errors
+- Join room validation errors
 - Timeout scenarios
 - Invalid responses
 - Server validation errors
@@ -1118,6 +1154,12 @@ The hook is fully typed with TypeScript interfaces for all data structures and r
    - Use `checkJoinerInRoom` to verify user status
    - Check if user is in another room with active session
    - Verify session expiration (3-minute timeout)
+
+6. **Duplicate Join Error**
+   - Listen for `joinRoomError` event
+   - Check if user has already joined the same room
+   - Verify session status (PENDING/RUNNING)
+   - Handle "You have already joined this room" message
 
 ### Debug Tips
 
@@ -1156,6 +1198,50 @@ The hook is fully typed with TypeScript interfaces for all data structures and r
    }
    ```
 
+5. **Handle Join Room Events**
+   ```typescript
+   const { joinRoom } = useGameRoomWebSocket({
+     onConnect: (info) => {
+       // Listen for join room events
+       socket.on('joinRoomSuccess', (data) => {
+         console.log('Join room success:', data);
+       });
+       
+       socket.on('joinRoomError', (data) => {
+         console.log('Join room error:', data);
+         if (data.message === 'You have already joined this room') {
+           console.log('User already in room, handle accordingly');
+         }
+       });
+     }
+   });
+   ```
+
+## Duplicate Join Prevention
+
+### 🔒 **Server-side Validation**
+The WebSocket gateway includes built-in duplicate join prevention:
+
+#### **How it works:**
+1. **Event Trigger**: When `GameRoom.joinRoomSuccess` event is emitted
+2. **Database Check**: Server queries for existing joins by the same user in the same room/session
+3. **Status Validation**: Checks for `EXECUTED` status in `PENDING` or `RUNNING` sessions
+4. **Response**: Emits `joinRoomError` if duplicate found, `joinRoomSuccess` if valid
+
+#### **Events Emitted:**
+- **`joinRoomSuccess`**: User successfully joined room
+- **`joinRoomError`**: User already joined or validation failed
+
+#### **Error Messages:**
+- `"You have already joined this room"` - Duplicate join detected
+- `"Failed to join room"` - General join failure
+
+### 🎯 **Business Logic:**
+- **One Room Per User**: User can only join one room at a time
+- **Session Validation**: Only checks active sessions (PENDING/RUNNING)
+- **Real-time Feedback**: Immediate response to join attempts
+- **Data Integrity**: Prevents duplicate participation records
+
 ## Session Status Filtering
 
 ### 🚫 **Excluded Status: OUT**
@@ -1193,6 +1279,8 @@ This hook and the underlying WebSocket gateway **exclude sessions with `out` sta
 - **Debounced Updates**: Prevents excessive broadcasts
 - **Session Expiration**: Built-in 3-minute session timeout checking
 - **User Validation**: Prevents duplicate room participation
+- **Duplicate Join Prevention**: Server-side validation with real-time feedback
+- **Join Room Events**: Success and error events for better UX
 
 ### 🆕 **Improved Error Handling**
 - **Comprehensive Validation**: Server-side validation for all operations
@@ -1201,3 +1289,5 @@ This hook and the underlying WebSocket gateway **exclude sessions with `out` sta
 - **Connection Recovery**: Automatic reconnection support
 - **Session Validation**: Built-in session expiration checking
 - **User Status Validation**: Prevents invalid room participation
+- **Duplicate Join Detection**: Real-time validation with immediate feedback
+- **Join Room Error Events**: Specific error handling for join failures
