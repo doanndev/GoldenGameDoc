@@ -1,7 +1,7 @@
-# Game Room WebSocket React Hook - Optimized for Real-time Participants
+# Game Room WebSocket React Hook - Complete Integration Guide
 
 ## Overview
-This document provides a comprehensive React hook for integrating with the optimized Game Room WebSocket gateway in Next.js applications. The hook handles all WebSocket events, connection management, and provides a clean API for game room functionality with **real-time participants updates** and **high performance**. 
+This document provides a comprehensive React hook for integrating with the Game Room WebSocket gateway in Next.js applications. The hook handles all WebSocket events, connection management, and provides a clean API for game room functionality with **real-time participants updates**, **session management**, and **high performance**. 
 
 **Note**: This hook only handles sessions with status `pending`, `running`, and `end`. Sessions with `out` status are excluded from all operations.
 
@@ -142,6 +142,13 @@ export interface ConnectionInfo {
   userId: number | null;
 }
 
+export interface CheckJoinerResult {
+  success: boolean;
+  roomId: number;
+  sessionId: number;
+  error?: string;
+}
+
 // Hook options
 export interface UseGameRoomWebSocketOptions {
   serverUrl?: string;
@@ -171,6 +178,7 @@ export interface UseGameRoomWebSocketReturn {
   joinRoom: (payload: { roomId: number }) => Promise<JoinRoomResult | null>;
   leaveRoom: (payload: { roomId: number }) => void;
   getCurrentRoomParticipants: (payload: { roomId: number }) => Promise<RoomParticipants | null>;
+  checkJoinerInRoom: (payload: { roomId: number, sessionId: number }) => Promise<CheckJoinerResult | null>;
   
   // Connection management
   connect: () => void;
@@ -209,6 +217,10 @@ export const useGameRoomWebSocket = (
   } | null>(null);
   const getParticipantsPromiseRef = useRef<{
     resolve: (value: RoomParticipants | null) => void;
+    reject: (reason?: any) => void;
+  } | null>(null);
+  const checkJoinerPromiseRef = useRef<{
+    resolve: (value: CheckJoinerResult | null) => void;
     reject: (reason?: any) => void;
   } | null>(null);
 
@@ -292,6 +304,16 @@ export const useGameRoomWebSocket = (
         if (getParticipantsPromiseRef.current) {
           getParticipantsPromiseRef.current.resolve(data);
           getParticipantsPromiseRef.current = null;
+        }
+      });
+
+      socket.on('checkJoinerInRoomResult', (data: CheckJoinerResult) => {
+        console.log('🔍 Check joiner in room result:', data);
+        
+        // Resolve promise if waiting for response
+        if (checkJoinerPromiseRef.current) {
+          checkJoinerPromiseRef.current.resolve(data);
+          checkJoinerPromiseRef.current = null;
         }
       });
 
@@ -446,6 +468,36 @@ export const useGameRoomWebSocket = (
     });
   }, []);
 
+  // Check if user is already in a room
+  const checkJoinerInRoom = useCallback(async (payload: { roomId: number, sessionId: number }): Promise<CheckJoinerResult | null> => {
+    if (!socketRef.current?.connected) {
+      console.warn('⚠️ WebSocket not connected, cannot check joiner');
+      return null;
+    }
+
+    return new Promise((resolve) => {
+      const handleResponse = (data: CheckJoinerResult) => {
+        console.log('🔍 Check joiner result received:', data);
+        socketRef.current?.off('checkJoinerInRoomResult', handleResponse);
+        resolve(data);
+      };
+
+      checkJoinerPromiseRef.current = { resolve, reject: () => {} };
+      socketRef.current?.on('checkJoinerInRoomResult', handleResponse);
+      console.log('🔍 Checking joiner in room:', payload);
+      socketRef.current?.emit('checkJoinerInRoom', payload);
+
+      // Timeout after 5 seconds
+      setTimeout(() => {
+        socketRef.current?.off('checkJoinerInRoomResult', handleResponse);
+        if (checkJoinerPromiseRef.current) {
+          checkJoinerPromiseRef.current.resolve(null);
+          checkJoinerPromiseRef.current = null;
+        }
+      }, 5000);
+    });
+  }, []);
+
   // Auto-connect on mount
   useEffect(() => {
     if (autoConnect) {
@@ -484,6 +536,7 @@ export const useGameRoomWebSocket = (
     joinRoom,
     leaveRoom,
     getCurrentRoomParticipants,
+    checkJoinerInRoom,
     
     // Connection management
     connect,
@@ -520,6 +573,7 @@ const GameRoomComponent: React.FC = () => {
     joinRoom,
     leaveRoom,
     getCurrentRoomParticipants,
+    checkJoinerInRoom,
     error,
     clearError,
   } = useGameRoomWebSocket({
@@ -574,6 +628,23 @@ const GameRoomComponent: React.FC = () => {
       }
     } catch (error) {
       console.error('Error getting participants:', error);
+    }
+  };
+
+  const handleCheckJoiner = async () => {
+    try {
+      const result = await checkJoinerInRoom({ roomId: 123, sessionId: 456 });
+      if (result) {
+        if (result.success) {
+          console.log('User is already in room:', result);
+        } else {
+          console.log('User is not in room or session expired:', result);
+        }
+      } else {
+        console.log('Failed to check joiner status');
+      }
+    } catch (error) {
+      console.error('Error checking joiner:', error);
     }
   };
 
@@ -693,6 +764,7 @@ const GameRoomComponent: React.FC = () => {
         <button onClick={handleJoinRoom}>Join Room</button>
         <button onClick={handleLeaveRoom}>Leave Room</button>
         <button onClick={handleGetParticipants}>Get Participants</button>
+        <button onClick={handleCheckJoiner}>Check Joiner</button>
         <button onClick={handleGetRoomCounts}>Get Room Counts</button>
       </div>
     </div>
@@ -722,6 +794,7 @@ const GameRoomsPage: React.FC = () => {
     joinRoom,
     leaveRoom,
     getCurrentRoomParticipants,
+    checkJoinerInRoom,
     error,
   } = useGameRoomWebSocket({
     serverUrl: process.env.NEXT_PUBLIC_WEBSOCKET_URL,
@@ -753,6 +826,13 @@ const GameRoomsPage: React.FC = () => {
 
   const handleJoinRoom = async (roomId: number) => {
     try {
+      // First check if user is already in a room
+      const checkResult = await checkJoinerInRoom({ roomId, sessionId: 0 }); // sessionId 0 for general check
+      if (checkResult?.success) {
+        alert('You are already in a room. Please leave the current room first.');
+        return;
+      }
+
       const result = await joinRoom({ roomId });
       if (result?.success) {
         alert(`Successfully joined room ${roomId}`);
@@ -923,6 +1003,7 @@ NEXT_PUBLIC_WEBSOCKET_URL=http://localhost:8008
 | `joinRoom` | `{ roomId: number }` | Join a room and get participants list |
 | `leaveRoom` | `{ roomId: number }` | Leave a room |
 | `getCurrentRoomParticipants` | `{ roomId: number }` | Get current participants for a room |
+| `checkJoinerInRoom` | `{ roomId: number, sessionId: number }` | Check if user is already in a room |
 
 ### Server → Client Events
 
@@ -935,6 +1016,7 @@ NEXT_PUBLIC_WEBSOCKET_URL=http://localhost:8008
 | `joinRoomResult` | `JoinRoomResult` | Join room result with participants |
 | `roomParticipantsUpdated` | `RoomParticipants` | Real-time participants update (broadcast) |
 | `currentRoomParticipantsResult` | `RoomParticipants` | Current room participants result |
+| `checkJoinerInRoomResult` | `{ success: boolean, roomId: number, sessionId: number, error?: string }` | Result of joiner check |
 | `error` | `{ message: string }` | Error occurred |
 
 ## Features
@@ -964,6 +1046,7 @@ NEXT_PUBLIC_WEBSOCKET_URL=http://localhost:8008
    - Get current participants list
    - Real-time participant updates
    - Leave room functionality
+   - Check if user is already in a room
    - Promise-based API for async operations
    - Timeout handling
 
@@ -985,11 +1068,13 @@ NEXT_PUBLIC_WEBSOCKET_URL=http://localhost:8008
 
 - **Optimized Queries**: Server uses TypeORM QueryBuilder for better performance
 - **Caching**: Server implements 2-second cache for room counts
-- **Debouncing**: Server uses 100ms debouncing for broadcasts
+- **Debouncing**: Server uses 100ms debouncing for broadcasts and 500ms for subscriptions
 - **Real-time Updates**: Automatic updates without polling
 - **Memory Management**: Automatic cleanup on unmount
 - **Promise-based**: Efficient async operations with timeout handling
 - **Filtered Data**: Only processes sessions with `pending`, `running`, `end` status (excludes `out`)
+- **Session Validation**: Built-in session expiration checking (3-minute timeout)
+- **User Validation**: Prevents duplicate room participation
 
 ## Error Handling
 
@@ -997,6 +1082,8 @@ The hook provides comprehensive error handling for:
 - Connection errors
 - WebSocket errors
 - Join room failures
+- Session expiration errors
+- User validation errors
 - Timeout scenarios
 - Invalid responses
 - Server validation errors
@@ -1027,6 +1114,11 @@ The hook is fully typed with TypeScript interfaces for all data structures and r
    - Check if there's a PENDING session for the room
    - Verify session hasn't expired
 
+5. **User Already in Room**
+   - Use `checkJoinerInRoom` to verify user status
+   - Check if user is in another room with active session
+   - Verify session expiration (3-minute timeout)
+
 ### Debug Tips
 
 1. **Enable Console Logging**
@@ -1051,6 +1143,16 @@ The hook is fully typed with TypeScript interfaces for all data structures and r
      }
    } catch (error) {
      console.error('Join error:', error);
+   }
+   ```
+
+4. **Check User Status Before Joining**
+   ```typescript
+   const checkResult = await checkJoinerInRoom({ roomId: 123, sessionId: 456 });
+   if (checkResult?.success) {
+     console.log('User is already in room');
+   } else {
+     console.log('User can join room');
    }
    ```
 
@@ -1089,9 +1191,13 @@ This hook and the underlying WebSocket gateway **exclude sessions with `out` sta
 - **Event-driven**: Uses internal events for real-time updates
 - **No Polling**: Eliminates need for manual refresh
 - **Debounced Updates**: Prevents excessive broadcasts
+- **Session Expiration**: Built-in 3-minute session timeout checking
+- **User Validation**: Prevents duplicate room participation
 
 ### 🆕 **Improved Error Handling**
 - **Comprehensive Validation**: Server-side validation for all operations
 - **Clear Error Messages**: Descriptive error responses
 - **Timeout Handling**: Prevents hanging operations
 - **Connection Recovery**: Automatic reconnection support
+- **Session Validation**: Built-in session expiration checking
+- **User Status Validation**: Prevents invalid room participation
