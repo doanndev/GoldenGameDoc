@@ -706,22 +706,142 @@ GET /game-join-rooms/joiner-by-room?page=1&limit=10
     "message": "Game join room fetched successfully",
     "data": [
         {
-            "id": 649,
+            "id": 1010,
             "wallet_address": "EttPfSsK9GoszoUcfsLnnbnQHMy14H2PrsX1JctXPHxT",
-            "amount": 30.5,
-            "time_join": "2025-10-04T15:35:03.853Z",
+            "amount": 5,
+            "time_join": "2025-10-08T06:19:10.133Z",
             "status": "executed",
-            "tx_hash": "1234567890",
+            "tx_hash": "3triZWwqPWbeHN9RGFJ7cVjk2mNwNM1EaEQqxd4oabZkCmYUCzSqZqcwmHijwEJVX3MTerZnXHiHXbhJRMuNEqR2",
             "session": {
-                "id": 341300,
-                "session": "1759592019466",
-                "time_start": "2025-10-04T15:36:39.466Z",
+                "id": 16190,
+                "session": "1759904260479",
+                "time_start": "2025-10-08T06:20:40.479Z",
                 "status": "running"
             },
             "room": {
-                "id": 140,
-                "name": "Golden Room",
-                "participation_amount": 30.5,
+                "id": 22,
+                "name": "xổ số an yên",
+                "participation_amount": 5,
+                "prizes_num": 3
+            },
+            "user": {
+                "id": 142859,
+                "username": "tranthe"
+            }
+        },
+        {
+            "id": 1001,
+            "wallet_address": "EttPfSsK9GoszoUcfsLnnbnQHMy14H2PrsX1JctXPHxT",
+            "amount": 5,
+            "time_join": "2025-10-08T06:10:50.920Z",
+            "status": "executed",
+            "tx_hash": "5sf1iMHjaH5zz7namj5Eh17QpwVBcUAVLmVBiUjXAdr8ummXawGpqL4RRVT1fq1WPaNG9oranstxtR7jgc5BYRZo",
+            "session": {
+                "id": 16129,
+                "session": "1759903797391",
+                "time_start": "2025-10-08T06:12:57.391Z",
+                "status": "running"
+            },
+            "room": {
+                "id": 3,
+                "name": "Xo so Dong Ky",
+                "participation_amount": 5,
+                "prizes_num": 3
+            },
+            "user": {
+                "id": 142859,
+                "username": "tranthe"
+            }
+        },
+        {
+            "id": 960,
+            "wallet_address": "EttPfSsK9GoszoUcfsLnnbnQHMy14H2PrsX1JctXPHxT",
+            "amount": 5,
+            "time_join": "2025-10-08T04:43:12.789Z",
+            "status": "executed",
+            "tx_hash": "5xspxvoWBbgbnWRa7NnEuYTHiVFMVD7eosFeaVRkRwKrxgWZaZtj7SEdzsoNvumzJt5rKLf8u9KZ9hTS9oWTu65A",
+            "session": {
+                "id": 15377,
+                "session": "1759898456898",
+                "time_start": "2025-10-08T04:43:56.898Z",
+                "status": "running"
+            },
+            "room": {
+                "id": 2,
+                "name": "Xo so",
+                "participation_amount": 5,
+                "prizes_num": 2
+            },
+            "user": {
+                "id": 142859,
+                "username": "tranthe"
+            }
+        },
+        {
+            "id": 949,
+            "wallet_address": "EttPfSsK9GoszoUcfsLnnbnQHMy14H2PrsX1JctXPHxT",
+            "amount": 20,
+            "time_join": "2025-10-08T04:26:57.783Z",
+            "status": "executed",
+            "tx_hash": "2qyTyeDLyhS1fVFsavxFHwD8wtHUCyN9N1jqSQrccsMdwGAigcGFdnmC5pBeb2yFRceB4CKkbJFhPiXf4UeQQTzL",
+            "session": {
+                "id": 15211,
+                "session": "1759897555863",
+                "time_start": "2025-10-08T04:28:55.863Z",
+                "status": "running"
+            },
+            "room": {
+                "id": 21,
+                "name": "Xổ số is the best",
+                "participation_amount": 20,
+                "prizes_num": 2
+            },
+            "user": {
+                "id": 142859,
+                "username": "tranthe"
+            }
+        },
+        {
+            "id": 265,
+            "wallet_address": "EttPfSsK9GoszoUcfsLnnbnQHMy14H2PrsX1JctXPHxT",
+            "amount": 5,
+            "time_join": "2025-10-07T05:02:09.336Z",
+            "status": "executed",
+            "tx_hash": "1234567890",
+            "session": {
+                "id": 1268,
+                "session": "1759813248664",
+                "time_start": "2025-10-07T05:03:48.664Z",
+                "status": "running"
+            },
+            "room": {
+                "id": 8,
+                "name": "phòng test xoso",
+                "participation_amount": 5,
+                "prizes_num": 3
+            },
+            "user": {
+                "id": 142859,
+                "username": "tranthe"
+            }
+        },
+        {
+            "id": 66,
+            "wallet_address": "EttPfSsK9GoszoUcfsLnnbnQHMy14H2PrsX1JctXPHxT",
+            "amount": 5,
+            "time_join": "2025-10-06T13:09:40.358Z",
+            "status": "executed",
+            "tx_hash": "1234567890",
+            "session": {
+                "id": 154,
+                "session": "1759756005758",
+                "time_start": "2025-10-06T13:09:45.758Z",
+                "status": "running"
+            },
+            "room": {
+                "id": 5,
+                "name": "Ha Long Bay",
+                "participation_amount": 5,
                 "prizes_num": 2
             },
             "user": {
@@ -733,7 +853,7 @@ GET /game-join-rooms/joiner-by-room?page=1&limit=10
     "pagination": {
         "page": 1,
         "limit": 10,
-        "total": 1,
+        "total": 6,
         "totalPages": 1,
         "hasNext": false,
         "hasPrev": false
