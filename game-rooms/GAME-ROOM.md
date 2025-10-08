@@ -91,12 +91,8 @@ Lấy danh sách tất cả phòng game với phân trang và tìm kiếm.
 | `session_id` | number | No | 0 | ID của session |
 | `page` | number | No | 1 | Số trang |
 | `limit` | number | No | 6 | Số lượng items per page |
-| `room_id` | number | No | 0 | ID của phòng |
 | `game_type_id` | number | No | 0 | ID loại game |
-| `status` | string | No | - | Trạng thái phòng |
-| `host` | string | No | - | Nick name |
-| `name` | string | No | - | ên của phòng |
-| `search` | string | No | - | Từ khóa tìm kiếm |
+| `search` | string | No | - | Từ khóa tìm kiếm(status, room_id, host - nickname, room_name |
 
 #### Example Request
 ```
