@@ -92,7 +92,7 @@ Lấy danh sách tất cả phòng game với phân trang và tìm kiếm.
 | `page` | number | No | 1 | Số trang |
 | `limit` | number | No | 6 | Số lượng items per page |
 | `game_type_id` | number | No | 0 | ID loại game |
-| `search` | string | No | - | Từ khóa tìm kiếm(status, room_id, host - nickname, room_name |
+| `search` | string | No | - | Từ khóa tìm kiếm(status, room_id, host - nickname, room_name, participation_amount(bet) |
 
 #### Example Request
 ```
