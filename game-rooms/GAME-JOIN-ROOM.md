@@ -682,6 +682,65 @@ Sử dụng cho các API GET với query parameters
 
 ---
 
+### 7. Get Game Rooms by User (Latest Sessions)
+**GET** `/game-join-rooms/joiner-by-room`
+
+Lấy danh sách các game room mà user đã tham gia, chỉ hiển thị session mới nhất với trạng thái pending/running/end.
+
+#### Query Parameters
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `session_id` | number | No | - | ID của session (optional filter) |
+| `room_id` | number | No | - | ID của phòng game (optional filter) |
+| `page` | number | No | 1 | Số trang |
+| `limit` | number | No | 10 | Số lượng items per page |
+
+#### Example Request
+```
+GET /game-join-rooms/joiner-by-room?page=1&limit=10
+```
+
+#### Success Response (200)
+```json
+{
+    "message": "Game join room fetched successfully",
+    "data": [
+        {
+            "id": 649,
+            "wallet_address": "EttPfSsK9GoszoUcfsLnnbnQHMy14H2PrsX1JctXPHxT",
+            "amount": 30.5,
+            "time_join": "2025-10-04T15:35:03.853Z",
+            "status": "executed",
+            "tx_hash": "1234567890",
+            "session": {
+                "id": 341300,
+                "session": "1759592019466",
+                "time_start": "2025-10-04T15:36:39.466Z",
+                "status": "running"
+            },
+            "room": {
+                "id": 140,
+                "name": "Golden Room",
+                "participation_amount": 30.5,
+                "prizes_num": 2
+            },
+            "user": {
+                "id": 142859,
+                "username": "tranthe"
+            }
+        }
+    ],
+    "pagination": {
+        "page": 1,
+        "limit": 10,
+        "total": 1,
+        "totalPages": 1,
+        "hasNext": false,
+        "hasPrev": false
+    }
+}
+```
+
 ## Usage Examples
 
 ### 1. Join Game Room
