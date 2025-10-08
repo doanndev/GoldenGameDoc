@@ -11,8 +11,6 @@ Dự án này cung cấp một React hook (`useRpsGame`) và trang test để t�
 
 #### Hook Code
 ```typescript
-// src/hooks/useRpsGame.ts
-// [Hook code sẽ được thêm vào đây]
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
 
@@ -596,8 +594,6 @@ export const useRpsGame = (serverUrl?: string): UseRpsGameReturn => {
 
 #### Test Page Code
 ```typescript
-// src/app/test/page.tsx
-// [Test page code sẽ được thêm vào đây]
 'use client';
 
 import React, { useState, useEffect } from 'react';
