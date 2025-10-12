@@ -94,6 +94,7 @@ Lấy danh sách tất cả phòng game với phân trang và tìm kiếm.
 | `game_type_id` | number | No | 0 | ID loại game |
 | `search` | string | No | - | Từ khóa tìm kiếm(status, room_id, host - nickname, room_name, participation_amount(bet) |
 | `participation_amount` | string | No | - | Lọc giá cược cho game room |
+| `sort_by` and `sort_order` | string | No | - | Lọc room theo số lượng người tham gia: sort_by: [ `num_joiners` , `participation_amount` hoặc `total_amount` và sort_order: [`asc` hoặc `desc`]|
 | `search` | string | No | - | Từ khóa tìm kiếm(status, room_id, host - nickname, room_name, participation_amount(bet) |
 
 #### Example Request
