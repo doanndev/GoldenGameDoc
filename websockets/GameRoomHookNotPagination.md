@@ -3,7 +3,7 @@
 ## Overview
 This document provides a comprehensive React hook for integrating with the Game Room WebSocket gateway in Next.js applications. The hook handles all WebSocket events, connection management, and provides a clean API for game room functionality with **real-time participants updates**, **session management**, and **high performance**. 
 
-**Note**: This hook only handles sessions with status `pending`, `running`, and `end`. Sessions with `out` status are excluded from all operations.
+**Note**: This hook only handles sessions with status `pending`, `running`, `end`, and `out`. All session statuses are included for comprehensive monitoring.
 
 ## Installation
 
@@ -35,6 +35,7 @@ export const GAME_SESSION_STATUS = {
   PENDING: 'pending',
   RUNNING: 'running',
   END: 'end',
+  OUT: 'out',
 } as const;
 
 export const GAME_JOIN_ROOM_STATUS = {
@@ -70,6 +71,9 @@ export interface GameTypeCounts {
     count: number;
   };
   end: {
+    count: number;
+  };
+  out: {
     count: number;
   };
   total: {
@@ -119,6 +123,7 @@ export interface RoomParticipants {
   sessionStatus?: string | null;
   participants: Participant[];
   totalCount: number;
+  totalAmount?: number;
   timestamp: string;
   error?: string;
 }
@@ -142,9 +147,9 @@ export interface ConnectionInfo {
   userId: number | null;
 }
 
-export interface UserActiveRoomResult {
+export interface UserCurrentRoomStatusResult {
   success: boolean;
-  isInActiveRoom: boolean;
+  isAlreadyInRoom: boolean;
   currentRoom: {
     roomId: number;
     roomName: string;
@@ -152,6 +157,22 @@ export interface UserActiveRoomResult {
     sessionStatus: string;
     timeStart: string;
     isExpired: boolean;
+  } | null;
+  message?: string;
+  error?: string;
+}
+
+export interface CheckJoinerInRoomResult {
+  success: boolean;
+  roomId: number;
+  sessionId: number;
+  isAlreadyInRoom: boolean;
+  currentRoom: {
+    roomId: number;
+    roomName: string;
+    sessionId: number;
+    sessionStatus: string;
+    timeStart: string;
   } | null;
   message?: string;
   error?: string;
@@ -174,7 +195,6 @@ export interface SessionStatusUpdated {
   };
   message: string;
 }
-
 
 // Hook options
 export interface UseGameRoomWebSocketOptions {
@@ -206,7 +226,11 @@ export interface UseGameRoomWebSocketReturn {
   joinRoom: (payload: { roomId: number, sessionId: number }) => Promise<JoinRoomResult | null>;
   leaveRoom: (payload: { roomId: number }) => void;
   getCurrentRoomParticipants: (payload: { roomId: number }) => Promise<RoomParticipants | null>;
-  checkUserActiveRoom: () => Promise<UserActiveRoomResult | null>;
+  
+  // User status
+  userCurrentRoomStatus: UserCurrentRoomStatusResult | null;
+  checkJoinerInRoom: (payload: { roomId: number, sessionId: number }) => Promise<CheckJoinerInRoomResult | null>;
+  getUserCurrentRoomStatus: () => Promise<UserCurrentRoomStatusResult | null>;
   
   // Session status updates
   sessionStatusUpdated: SessionStatusUpdated | null;
@@ -239,7 +263,7 @@ export const useGameRoomWebSocket = (
   const [roomCounts, setRoomCounts] = useState<GameRoomCounts | null>(null);
   const [currentSession, setCurrentSession] = useState<CurrentSessionSnapshot | null>(null);
   const [roomParticipants, setRoomParticipants] = useState<RoomParticipants | null>(null);
-  const [userActiveRoomStatus, setUserActiveRoomStatus] = useState<UserActiveRoomResult | null>(null);
+  const [userCurrentRoomStatus, setUserCurrentRoomStatus] = useState<UserCurrentRoomStatusResult | null>(null);
   const [sessionStatusUpdated, setSessionStatusUpdated] = useState<SessionStatusUpdated | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -253,8 +277,12 @@ export const useGameRoomWebSocket = (
     resolve: (value: RoomParticipants | null) => void;
     reject: (reason?: any) => void;
   } | null>(null);
-  const checkUserActiveRoomPromiseRef = useRef<{
-    resolve: (value: UserActiveRoomResult | null) => void;
+  const checkJoinerPromiseRef = useRef<{
+    resolve: (value: CheckJoinerInRoomResult | null) => void;
+    reject: (reason?: any) => void;
+  } | null>(null);
+  const getUserStatusPromiseRef = useRef<{
+    resolve: (value: UserCurrentRoomStatusResult | null) => void;
     reject: (reason?: any) => void;
   } | null>(null);
 
@@ -341,14 +369,25 @@ export const useGameRoomWebSocket = (
         }
       });
 
-      socket.on('userActiveRoomResult', (data: UserActiveRoomResult) => {
-        console.log('👤 User active room result:', data);
-        setUserActiveRoomStatus(data);
+      // User status events
+      socket.on('userCurrentRoomStatusResult', (data: UserCurrentRoomStatusResult) => {
+        console.log('👤 User current room status result:', data);
+        setUserCurrentRoomStatus(data);
         
         // Resolve promise if waiting for response
-        if (checkUserActiveRoomPromiseRef.current) {
-          checkUserActiveRoomPromiseRef.current.resolve(data);
-          checkUserActiveRoomPromiseRef.current = null;
+        if (getUserStatusPromiseRef.current) {
+          getUserStatusPromiseRef.current.resolve(data);
+          getUserStatusPromiseRef.current = null;
+        }
+      });
+
+      socket.on('checkJoinerInRoomResult', (data: CheckJoinerInRoomResult) => {
+        console.log('🔍 Check joiner in room result:', data);
+        
+        // Resolve promise if waiting for response
+        if (checkJoinerPromiseRef.current) {
+          checkJoinerPromiseRef.current.resolve(data);
+          checkJoinerPromiseRef.current = null;
         }
       });
 
@@ -358,7 +397,6 @@ export const useGameRoomWebSocket = (
         setSessionStatusUpdated(data);
         onSessionStatusUpdated?.(data);
       });
-
 
       // Error handling
       socket.on('error', (errorData: { message: string }) => {
@@ -512,31 +550,61 @@ export const useGameRoomWebSocket = (
   }, []);
 
   // Check if user is currently in any active room
-  const checkUserActiveRoom = useCallback(async (): Promise<UserActiveRoomResult | null> => {
+  const checkJoinerInRoom = useCallback(async (payload: { roomId: number, sessionId: number }): Promise<CheckJoinerInRoomResult | null> => {
     if (!socketRef.current?.connected) {
-      console.warn('⚠️ WebSocket not connected, cannot check user active room');
+      console.warn('⚠️ WebSocket not connected, cannot check joiner in room');
       return null;
     }
 
     return new Promise((resolve) => {
-      const handleResponse = (data: UserActiveRoomResult) => {
-        console.log('👤 User active room result received:', data);
-        setUserActiveRoomStatus(data);
-        socketRef.current?.off('userActiveRoomResult', handleResponse);
+      const handleResponse = (data: CheckJoinerInRoomResult) => {
+        console.log('🔍 Check joiner in room result received:', data);
+        socketRef.current?.off('checkJoinerInRoomResult', handleResponse);
         resolve(data);
       };
 
-      checkUserActiveRoomPromiseRef.current = { resolve, reject: () => {} };
-      socketRef.current?.on('userActiveRoomResult', handleResponse);
-      console.log('👤 Checking user active room');
-      socketRef.current?.emit('checkUserActiveRoom');
+      checkJoinerPromiseRef.current = { resolve, reject: () => {} };
+      socketRef.current?.on('checkJoinerInRoomResult', handleResponse);
+      console.log('🔍 Checking joiner in room:', payload);
+      socketRef.current?.emit('checkJoinerInRoom', payload);
 
       // Timeout after 5 seconds
       setTimeout(() => {
-        socketRef.current?.off('userActiveRoomResult', handleResponse);
-        if (checkUserActiveRoomPromiseRef.current) {
-          checkUserActiveRoomPromiseRef.current.resolve(null);
-          checkUserActiveRoomPromiseRef.current = null;
+        socketRef.current?.off('checkJoinerInRoomResult', handleResponse);
+        if (checkJoinerPromiseRef.current) {
+          checkJoinerPromiseRef.current.resolve(null);
+          checkJoinerPromiseRef.current = null;
+        }
+      }, 5000);
+    });
+  }, []);
+
+  // Get user current room status
+  const getUserCurrentRoomStatus = useCallback(async (): Promise<UserCurrentRoomStatusResult | null> => {
+    if (!socketRef.current?.connected) {
+      console.warn('⚠️ WebSocket not connected, cannot get user current room status');
+      return null;
+    }
+
+    return new Promise((resolve) => {
+      const handleResponse = (data: UserCurrentRoomStatusResult) => {
+        console.log('👤 User current room status result received:', data);
+        setUserCurrentRoomStatus(data);
+        socketRef.current?.off('userCurrentRoomStatusResult', handleResponse);
+        resolve(data);
+      };
+
+      getUserStatusPromiseRef.current = { resolve, reject: () => {} };
+      socketRef.current?.on('userCurrentRoomStatusResult', handleResponse);
+      console.log('👤 Getting user current room status');
+      socketRef.current?.emit('getUserCurrentRoomStatus');
+
+      // Timeout after 5 seconds
+      setTimeout(() => {
+        socketRef.current?.off('userCurrentRoomStatusResult', handleResponse);
+        if (getUserStatusPromiseRef.current) {
+          getUserStatusPromiseRef.current.resolve(null);
+          getUserStatusPromiseRef.current = null;
         }
       }, 5000);
     });
@@ -580,10 +648,11 @@ export const useGameRoomWebSocket = (
     joinRoom,
     leaveRoom,
     getCurrentRoomParticipants,
-    checkUserActiveRoom,
     
     // User status
-    userActiveRoomStatus,
+    userCurrentRoomStatus,
+    checkJoinerInRoom,
+    getUserCurrentRoomStatus,
     
     // Session status updates
     sessionStatusUpdated,
@@ -625,7 +694,8 @@ const GameRoomComponent: React.FC = () => {
     joinRoom,
     leaveRoom,
     getCurrentRoomParticipants,
-    checkUserActiveRoom,
+    checkJoinerInRoom,
+    getUserCurrentRoomStatus,
     error,
     clearError,
   } = useGameRoomWebSocket({
@@ -658,8 +728,36 @@ const GameRoomComponent: React.FC = () => {
     }
   }, [isConnected, subscribeCurrentSession]);
 
+  // Handle session status updates
+  useEffect(() => {
+    if (sessionStatusUpdated) {
+      console.log('Session status updated:', sessionStatusUpdated);
+      
+      // Show notification based on status change
+      if (sessionStatusUpdated.newStatus === 'running') {
+        alert(`Session ${sessionStatusUpdated.sessionId} is now running!`);
+      } else if (sessionStatusUpdated.newStatus === 'end') {
+        alert(`Session ${sessionStatusUpdated.sessionId} has ended!`);
+      } else if (sessionStatusUpdated.newStatus === 'out') {
+        alert(`Session ${sessionStatusUpdated.sessionId} has expired!`);
+      }
+    }
+  }, [sessionStatusUpdated]);
+
   const handleJoinRoom = async () => {
     try {
+      // First check if user can join
+      const checkResult = await checkJoinerInRoom({ roomId: 123, sessionId: 456 });
+      if (checkResult?.isAlreadyInRoom) {
+        alert(`You are already in room "${checkResult.currentRoom?.roomName}" (ID: ${checkResult.currentRoom?.roomId}). Please wait for the current session to end.`);
+        return;
+      }
+
+      if (!checkResult?.success) {
+        alert(`Cannot join room: ${checkResult?.message || 'Unknown error'}`);
+        return;
+      }
+
       const result = await joinRoom({ roomId: 123, sessionId: 456 });
       if (result?.success) {
         console.log('Successfully joined room:', result);
@@ -689,29 +787,11 @@ const GameRoomComponent: React.FC = () => {
     }
   };
 
-  const handleCheckJoiner = async () => {
+  const handleCheckUserStatus = async () => {
     try {
-      const result = await checkJoinerInRoom({ roomId: 123, sessionId: 456 });
-      if (result) {
-        if (result.isAlreadyInRoom) {
-          console.log('User is already in room:', result.currentRoom);
-          console.log('Cannot join new room:', result.message);
-        } else {
-          console.log('User can join room:', result.message);
-        }
-      } else {
-        console.log('Failed to check joiner status');
-      }
-    } catch (error) {
-      console.error('Error checking joiner:', error);
-    }
-  };
-
-  const handleCheckUserActiveRoom = async () => {
-    try {
-      const status = await checkUserActiveRoom();
+      const status = await getUserCurrentRoomStatus();
       if (status) {
-        if (status.isInActiveRoom) {
+        if (status.isAlreadyInRoom) {
           console.log('User is currently in room:', status.currentRoom);
           console.log('Room name:', status.currentRoom?.roomName);
           console.log('Session status:', status.currentRoom?.sessionStatus);
@@ -720,10 +800,10 @@ const GameRoomComponent: React.FC = () => {
           console.log('User is not in any active room');
         }
       } else {
-        console.log('Failed to check user active room');
+        console.log('Failed to get user status');
       }
     } catch (error) {
-      console.error('Error checking user active room:', error);
+      console.error('Error checking user status:', error);
     }
   };
 
@@ -740,22 +820,6 @@ const GameRoomComponent: React.FC = () => {
       console.error('Error getting room counts:', error);
     }
   };
-
-  // Handle session status updates
-  useEffect(() => {
-    if (sessionStatusUpdated) {
-      console.log('Session status updated:', sessionStatusUpdated);
-      
-      // Show notification based on status change
-      if (sessionStatusUpdated.newStatus === 'running') {
-        alert(`Session ${sessionStatusUpdated.sessionId} is now running!`);
-      } else if (sessionStatusUpdated.newStatus === 'end') {
-        alert(`Session ${sessionStatusUpdated.sessionId} has ended!`);
-      } else if (sessionStatusUpdated.newStatus === 'out') {
-        alert(`Session ${sessionStatusUpdated.sessionId} has expired!`);
-      }
-    }
-  }, [sessionStatusUpdated]);
 
   if (isConnecting) {
     return <div>Connecting to game rooms...</div>;
@@ -792,6 +856,7 @@ const GameRoomComponent: React.FC = () => {
             <p>Pending: {roomCounts.total.pending.count}</p>
             <p>Running: {roomCounts.total.running.count}</p>
             <p>End: {roomCounts.total.end.count}</p>
+            <p>Out: {roomCounts.total.out.count}</p>
             <p>Total: {roomCounts.total.total.count}</p>
           </div>
 
@@ -800,6 +865,7 @@ const GameRoomComponent: React.FC = () => {
             <p>Pending: {roomCounts.lottery.pending.count}</p>
             <p>Running: {roomCounts.lottery.running.count}</p>
             <p>End: {roomCounts.lottery.end.count}</p>
+            <p>Out: {roomCounts.lottery.out.count}</p>
             <p>Total: {roomCounts.lottery.total.count}</p>
           </div>
 
@@ -808,6 +874,7 @@ const GameRoomComponent: React.FC = () => {
             <p>Pending: {roomCounts.rps.pending.count}</p>
             <p>Running: {roomCounts.rps.running.count}</p>
             <p>End: {roomCounts.rps.end.count}</p>
+            <p>Out: {roomCounts.rps.out.count}</p>
             <p>Total: {roomCounts.rps.total.count}</p>
           </div>
 
@@ -899,8 +966,7 @@ const GameRoomComponent: React.FC = () => {
         <button onClick={handleJoinRoom}>Join Room</button>
         <button onClick={handleLeaveRoom}>Leave Room</button>
         <button onClick={handleGetParticipants}>Get Participants</button>
-        <button onClick={handleCheckJoiner}>Check Joiner</button>
-        <button onClick={handleCheckUserActiveRoom}>Check User Active Room</button>
+        <button onClick={handleCheckUserStatus}>Check User Status</button>
         <button onClick={handleGetRoomCounts}>Get Room Counts</button>
       </div>
     </div>
@@ -908,245 +974,6 @@ const GameRoomComponent: React.FC = () => {
 };
 
 export default GameRoomComponent;
-```
-
-### Advanced Usage with Real-time Updates
-
-```typescript
-// pages/game-rooms.tsx
-import React, { useState, useEffect } from 'react';
-import { useGameRoomWebSocket } from '../hooks/useGameRoomWebSocket';
-
-const GameRoomsPage: React.FC = () => {
-  const [selectedRoomId, setSelectedRoomId] = useState<number | null>(null);
-
-  const {
-    isConnected,
-    roomCounts,
-    currentSession,
-    roomParticipants,
-    userCurrentRoomStatus,
-    sessionStatusUpdated,
-    subscribeRoomCountByGameType,
-    subscribeCurrentSession,
-    joinRoom,
-    leaveRoom,
-    getCurrentRoomParticipants,
-    checkUserActiveRoom,
-    error,
-  } = useGameRoomWebSocket({
-    serverUrl: process.env.NEXT_PUBLIC_WEBSOCKET_URL,
-    autoConnect: true,
-    onConnect: (info) => {
-      console.log('Connected to game rooms:', info);
-    },
-    onError: (error) => {
-      console.error('Game room WebSocket error:', error);
-    },
-    onSessionStatusUpdated: (data) => {
-      console.log('Session status changed:', data);
-      // Handle session status changes
-      if (data.newStatus === 'running') {
-        console.log('Session is now running!');
-      } else if (data.newStatus === 'end') {
-        console.log('Session has ended!');
-      } else if (data.newStatus === 'out') {
-        console.log('Session has expired!');
-      }
-    },
-  });
-
-  // Room counts are automatically subscribed when connected
-  // No need to manually subscribe
-
-  // Subscribe to current session when room changes
-  useEffect(() => {
-    if (isConnected && selectedRoomId) {
-      subscribeCurrentSession(selectedRoomId);
-    }
-  }, [isConnected, selectedRoomId, subscribeCurrentSession]);
-
-  // Listen for real-time participant updates
-  useEffect(() => {
-    if (roomParticipants && roomParticipants.roomId === selectedRoomId) {
-      console.log('Participants updated for room:', roomParticipants.roomId);
-    }
-  }, [roomParticipants, selectedRoomId]);
-
-  // Listen for session status updates
-  useEffect(() => {
-    if (sessionStatusUpdated) {
-      console.log('Session status updated:', sessionStatusUpdated);
-      // You can add custom logic here based on status changes
-      if (sessionStatusUpdated.roomId === selectedRoomId) {
-        console.log('Status updated for current room:', selectedRoomId);
-      }
-    }
-  }, [sessionStatusUpdated, selectedRoomId]);
-
-  const handleJoinRoom = async (roomId: number) => {
-    try {
-      // First check if user is already in a room
-      const checkResult = await checkJoinerInRoom({ roomId, sessionId: 0 }); // sessionId 0 for general check
-      if (checkResult?.isAlreadyInRoom) {
-        alert(`You are already in room "${checkResult.currentRoom?.roomName}" (ID: ${checkResult.currentRoom?.roomId}). Please wait for the current session to end.`);
-        return;
-      }
-
-      if (!checkResult?.success) {
-        alert(`Cannot join room: ${checkResult?.message || 'Unknown error'}`);
-        return;
-      }
-
-      const result = await joinRoom({ roomId, sessionId: 0 }); // sessionId 0 for general join
-      if (result?.success) {
-        alert(`Successfully joined room ${roomId}`);
-        setSelectedRoomId(roomId);
-      } else {
-        alert(`Failed to join room: ${result?.error || 'Unknown error'}`);
-      }
-    } catch (error) {
-      console.error('Error joining room:', error);
-      alert('Error joining room');
-    }
-  };
-
-  const handleLeaveRoom = (roomId: number) => {
-    leaveRoom({ roomId });
-    if (selectedRoomId === roomId) {
-      setSelectedRoomId(null);
-    }
-  };
-
-  if (!isConnected) {
-    return <div>Connecting to game rooms...</div>;
-  }
-
-  return (
-    <div>
-      <h1>Game Rooms</h1>
-      
-      {error && (
-        <div style={{ color: 'red', padding: '10px', margin: '10px 0', border: '1px solid red' }}>
-          Error: {error}
-        </div>
-      )}
-
-      {roomCounts && (
-        <div style={{ margin: '20px 0' }}>
-          <h2>Room Statistics</h2>
-          
-          <div style={{ marginBottom: '20px' }}>
-            <h3>Total</h3>
-            <div style={{ display: 'flex', gap: '20px' }}>
-              <div>Pending: {roomCounts.total.pending.count}</div>
-              <div>Running: {roomCounts.total.running.count}</div>
-              <div>End: {roomCounts.total.end.count}</div>
-              <div>Total: {roomCounts.total.total.count}</div>
-            </div>
-          </div>
-
-          <div style={{ marginBottom: '20px' }}>
-            <h3>Lottery</h3>
-            <div style={{ display: 'flex', gap: '20px' }}>
-              <div>Pending: {roomCounts.lottery.pending.count}</div>
-              <div>Running: {roomCounts.lottery.running.count}</div>
-              <div>End: {roomCounts.lottery.end.count}</div>
-              <div>Total: {roomCounts.lottery.total.count}</div>
-            </div>
-          </div>
-
-          <div style={{ marginBottom: '20px' }}>
-            <h3>RPS</h3>
-            <div style={{ display: 'flex', gap: '20px' }}>
-              <div>Pending: {roomCounts.rps.pending.count}</div>
-              <div>Running: {roomCounts.rps.running.count}</div>
-              <div>End: {roomCounts.rps.end.count}</div>
-              <div>Total: {roomCounts.rps.total.count}</div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {currentSession && (
-        <div style={{ margin: '20px 0' }}>
-          <h2>Current Session (Room {currentSession.roomId})</h2>
-          {currentSession.current_session ? (
-            <div>
-              <p>Session ID: {currentSession.current_session.id}</p>
-              <p>Status: {currentSession.current_session.status}</p>
-              <p>Participants: {currentSession.current_session.participants_count}/{currentSession.current_session.max_participants}</p>
-              <p>Can Join: {currentSession.current_session.can_join ? 'Yes' : 'No'}</p>
-            </div>
-          ) : (
-            <p>No active session</p>
-          )}
-        </div>
-      )}
-
-      {roomParticipants && roomParticipants.roomId === selectedRoomId && (
-        <div style={{ margin: '20px 0' }}>
-          <h2>Room Participants ({roomParticipants.totalCount})</h2>
-          <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
-            {roomParticipants.participants.map((participant, index) => (
-              <div key={index} style={{ padding: '5px', border: '1px solid #ccc', margin: '2px 0' }}>
-                <strong>{participant.username || 'Unknown'}</strong> ({participant.fullname || 'N/A'})
-                <br />
-                Wallet: {participant.wallet_address}
-                <br />
-                Amount: {participant.amount}
-                <br />
-                Joined: {new Date(participant.time_join).toLocaleString()}
-                <br />
-                Status: {participant.status}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <div style={{ margin: '20px 0' }}>
-        <h2>Available Rooms</h2>
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-          {[1, 2, 3, 4, 5].map((roomId) => (
-            <div key={roomId} style={{ display: 'flex', gap: '5px' }}>
-              <button
-                onClick={() => handleJoinRoom(roomId)}
-                style={{
-                  padding: '10px 20px',
-                  backgroundColor: selectedRoomId === roomId ? '#007bff' : '#f8f9fa',
-                  color: selectedRoomId === roomId ? 'white' : 'black',
-                  border: '1px solid #ccc',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                }}
-              >
-                Join Room {roomId}
-              </button>
-              {selectedRoomId === roomId && (
-                <button
-                  onClick={() => handleLeaveRoom(roomId)}
-                  style={{
-                    padding: '10px 20px',
-                    backgroundColor: '#dc3545',
-                    color: 'white',
-                    border: '1px solid #dc3545',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                  }}
-                >
-                  Leave
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-};
-
-export default GameRoomsPage;
 ```
 
 ## Environment Variables
@@ -1168,7 +995,8 @@ NEXT_PUBLIC_WEBSOCKET_URL=http://localhost:8008
 | `joinRoom` | `{ roomId: number, sessionId: number }` | Join a room and get participants list |
 | `leaveRoom` | `{ roomId: number }` | Leave a room |
 | `getCurrentRoomParticipants` | `{ roomId: number }` | Get current participants for a room |
-| `checkUserActiveRoom` | - | Check if user is currently in any active room (simplified) |
+| `checkJoinerInRoom` | `{ roomId: number, sessionId: number }` | Check if user can join a room |
+| `getUserCurrentRoomStatus` | - | Get user's current room status |
 
 ### Server → Client Events
 
@@ -1181,7 +1009,8 @@ NEXT_PUBLIC_WEBSOCKET_URL=http://localhost:8008
 | `joinRoomResult` | `JoinRoomResult` | Join room result with participants |
 | `roomParticipantsUpdated` | `RoomParticipants` | Real-time participants update (broadcast) |
 | `currentRoomParticipantsResult` | `RoomParticipants` | Current room participants result |
-| `userActiveRoomResult` | `UserActiveRoomResult` | Result of user active room check (simplified) |
+| `userCurrentRoomStatusResult` | `UserCurrentRoomStatusResult` | User's current room status |
+| `checkJoinerInRoomResult` | `CheckJoinerInRoomResult` | Check joiner result |
 | `sessionStatusUpdated` | `SessionStatusUpdated` | Session status changed with detailed info |
 | `error` | `{ message: string }` | Error occurred |
 
@@ -1196,10 +1025,10 @@ NEXT_PUBLIC_WEBSOCKET_URL=http://localhost:8008
    - Error handling
 
 2. **Room Counts**
-   - Subscribe to room counts for all game types (pending, running, end only)
+   - Subscribe to room counts for all game types (pending, running, end, out)
    - Real-time updates when session status changes
    - Automatic broadcast on `GameRoom.sessionStatusChanged` event
-   - Excludes sessions with `out` status
+   - Includes all session statuses for comprehensive monitoring
    - Error handling
 
 3. **Current Session**
@@ -1212,7 +1041,7 @@ NEXT_PUBLIC_WEBSOCKET_URL=http://localhost:8008
    - Get current participants list
    - Real-time participant updates
    - Leave room functionality
-   - Check if user is already in a room
+   - Check if user can join a room
    - Get user's current room status
    - Cross-room validation with detailed room info
    - Promise-based API for async operations
@@ -1240,6 +1069,7 @@ NEXT_PUBLIC_WEBSOCKET_URL=http://localhost:8008
 - **onConnect**: Callback when connected
 - **onDisconnect**: Callback when disconnected
 - **onError**: Callback for errors
+- **onSessionStatusUpdated**: Callback for session status updates
 
 ## Performance Considerations
 
@@ -1249,7 +1079,7 @@ NEXT_PUBLIC_WEBSOCKET_URL=http://localhost:8008
 - **Real-time Updates**: Automatic updates without polling
 - **Memory Management**: Automatic cleanup on unmount
 - **Promise-based**: Efficient async operations with timeout handling
-- **Filtered Data**: Only processes sessions with `pending`, `running`, `end` status (excludes `out`)
+- **Filtered Data**: Processes all session statuses including `out` for comprehensive monitoring
 - **Session Validation**: Built-in session expiration checking (3-minute timeout)
 - **User Validation**: Prevents duplicate room participation
 - **Cross-Room Validation**: Server-side validation to prevent multiple room participation
@@ -1340,285 +1170,34 @@ The hook is fully typed with TypeScript interfaces for all data structures and r
    ```typescript
    const checkResult = await checkJoinerInRoom({ roomId: 123, sessionId: 456 });
    if (checkResult?.success) {
-     console.log('User is already in another room:', checkResult.message);
-     console.log('Current room:', checkResult.roomId, 'Session:', checkResult.sessionId);
+     console.log('User can join room:', checkResult.message);
    } else {
-     console.log('User can join room:', checkResult?.message);
+     console.log('User already in another room:', checkResult.message);
    }
    ```
 
-5. **Handle Cross-Room Validation**
+5. **Handle Session Status Updates**
    ```typescript
-   const { checkJoinerInRoom } = useGameRoomWebSocket();
+   const { sessionStatusUpdated } = useGameRoomWebSocket();
    
-   // Check before joining a room
-   const handleJoinRoom = async (roomId: number) => {
-     const checkResult = await checkJoinerInRoom({ roomId, sessionId: 0 });
-     if (checkResult?.success) {
-       console.log('User already in another room:', checkResult.message);
-       console.log('Current room:', checkResult.roomId);
-       return;
+   useEffect(() => {
+     if (sessionStatusUpdated) {
+       console.log('Session status changed:', sessionStatusUpdated);
+       // Handle different status changes
+       switch (sessionStatusUpdated.newStatus) {
+         case 'running':
+           console.log('Session is now running!');
+           break;
+         case 'end':
+           console.log('Session has ended!');
+           break;
+         case 'out':
+           console.log('Session has expired!');
+           break;
+       }
      }
-     
-     // Proceed with joining room
-     console.log('User can join room');
-   };
+   }, [sessionStatusUpdated]);
    ```
-
-## Cross-Room Validation & Duplicate Join Prevention
-
-### 🔒 **Server-side Validation**
-The WebSocket gateway includes comprehensive validation to prevent users from joining multiple rooms simultaneously:
-
-#### **How it works:**
-1. **Event Trigger**: When `checkJoinerInRoom` message is received with `{ roomId, sessionId }`
-2. **Database Check**: Server queries for existing joins by the same user in ANY other room with active session
-3. **Status Validation**: Checks for `EXECUTED` status in `PENDING` or `RUNNING` sessions (latest session only)
-4. **Session Expiration**: Checks if the target session has expired (3+ minutes)
-5. **Response**: Emits `checkJoinerInRoomResult` with validation result and room details
-
-#### **Events Emitted:**
-- **`checkJoinerInRoomResult`**: Validation result with detailed message
-
-#### **Response Messages:**
-- `"You are already in room 'RoomName' (ID: X). You can only join one room at a time."` - User already in another room
-- `"Session has expired"` - Current session has expired
-- `"User can join this room"` - User is free to join
-- `"User not authenticated"` - Authentication required
-- `"Session has expired, you can now join other rooms"` - Session expired, user can join other rooms
-
-### 🎯 **Business Logic:**
-- **One Room Per User**: User can only join one room at a time
-- **Cross-Room Validation**: Checks if user is already in ANY other room with active session
-- **Latest Session Only**: Only considers the latest session of each room
-- **Session Expiration**: User can join new room only when current session expires
-- **Real-time Feedback**: Immediate response to join attempts
-- **Data Integrity**: Prevents duplicate participation records
-
-### 🕐 **Session Expiration Logic**
-The system implements a 3-minute session timeout mechanism:
-
-#### **Session States:**
-- **PENDING**: Session waiting for participants (0-3 minutes)
-- **RUNNING**: Session active with enough participants
-- **END**: Session completed successfully
-- **OUT**: Session expired due to insufficient participants
-
-#### **User Join Rules:**
-1. **Active Session**: User cannot join another room if already in a PENDING/RUNNING session
-2. **Session Expired**: User can join new room only when current session expires (3+ minutes)
-3. **Insufficient Participants**: If session expires with < required participants, user is marked as OUT
-4. **Sufficient Participants**: If session expires with ≥ required participants, session becomes RUNNING
-
-#### **Validation Flow:**
-```
-User calls checkJoinerInRoom({ roomId: B, sessionId: B_session })
-    ↓
-Check if user already in Room A with active session (EXECUTED status)
-    ↓
-If YES: Return isAlreadyInRoom=true, currentRoom={A details}, success=false
-    ↓
-If NO: Check if Room B session expired (3+ minutes)
-    ↓
-If expired: Return isAlreadyInRoom=false, currentRoom=null, success=false, message="Session has expired"
-    ↓
-If not expired: Return isAlreadyInRoom=false, currentRoom=null, success=true, message="User can join this room"
-```
-
-## Join Room Functionality
-
-### 🚪 **Join Room with Session ID**
-The `joinRoom` method requires both `roomId` and `sessionId` parameters to properly join a room and receive real-time updates.
-
-#### **Payload Structure:**
-```typescript
-{
-  roomId: number;    // ID of the room to join
-  sessionId: number; // ID of the current session (can be 0 for general join)
-}
-```
-
-#### **How it works:**
-1. **Client Request**: `joinRoom({ roomId: 123, sessionId: 456 })`
-2. **Server Processing**: 
-   - Joins client to room WebSocket namespace
-   - Broadcasts current participants to all clients in room
-   - Returns join result with participants list
-3. **Real-time Updates**: Client receives `roomParticipantsUpdated` events
-
-#### **Response Data:**
-```typescript
-{
-  success: boolean;
-  roomId: number;
-  sessionId: number;
-  participants: Participant[];
-  totalCount: number;
-  message?: string;
-  timestamp: string;
-  error?: string;
-}
-```
-
-#### **Use Cases:**
-- **Join Specific Session**: Use actual sessionId for specific session
-- **General Join**: Use sessionId: 0 for general room join
-- **Real-time Updates**: Receive live participant updates
-- **Room Navigation**: Join multiple rooms for different sessions
-
-## Automatic User Status Updates
-
-### 🚀 **New Feature: Automatic Status Broadcasting**
-The WebSocket gateway now automatically broadcasts user room status updates when session status changes, eliminating the need for clients to manually check their status.
-
-#### **How it works:**
-1. **Event Trigger**: When any session status changes (PENDING → RUNNING → END/OUT)
-2. **Automatic Detection**: Server identifies all users participating in that session
-3. **Status Update**: Server automatically broadcasts updated status to all affected users
-4. **Real-time Notification**: Users receive immediate notifications about their room availability
-
-#### **Events Automatically Emitted:**
-- **`userCurrentRoomStatusResult`**: Updated user room status
-- **`checkJoinerInRoomResult`**: Notification when user can join other rooms
-
-#### **Automatic Notifications:**
-```typescript
-// When session ends or expires
-{
-  success: true,
-  roomId: 0, // General notification
-  sessionId: 0,
-  isAlreadyInRoom: false,
-  currentRoom: null,
-  message: "Session in room 'RoomName' has ended. You can now join other rooms."
-}
-
-// When user becomes free to join any room
-{
-  success: true,
-  roomId: 0, // General notification
-  sessionId: 0,
-  isAlreadyInRoom: false,
-  currentRoom: null,
-  message: "You are now free to join any room."
-}
-```
-
-#### **Benefits:**
-- ✅ **No Manual Checking**: Users don't need to manually check their status
-- ✅ **Real-time Updates**: Immediate notifications when sessions change
-- ✅ **Better UX**: Users know instantly when they can join other rooms
-- ✅ **Reduced API Calls**: Eliminates need for frequent status checks
-
-#### **Technical Implementation:**
-- **Event Trigger**: `@OnEvent('GameRoom.sessionStatusChanged')` automatically calls `broadcastUserRoomStatusUpdate()`
-- **Participant Detection**: Queries all users with `EXECUTED` status in the affected session
-- **Client Mapping**: Maps user IDs to connected WebSocket clients using `connectedClients` Map
-- **Status Broadcasting**: Emits `userCurrentRoomStatusResult` and `checkJoinerInRoomResult` events
-- **Performance Optimized**: Uses TypeORM QueryBuilder for efficient database queries
-- **Error Handling**: Comprehensive try-catch blocks with detailed logging
-
-## User Active Room Check
-
-### 🔍 **New Feature: checkUserActiveRoom**
-This feature allows clients to check if a user is currently in any active room without specifying a particular room. This is a simplified version that only requires the user to be authenticated.
-
-#### **How it works:**
-1. **Event Trigger**: When `checkUserActiveRoom` message is received (no payload required)
-2. **Database Check**: Server queries for existing joins by the user in ANY room with active session
-3. **Status Validation**: Checks for `EXECUTED` status in `PENDING` or `RUNNING` sessions (latest session only)
-4. **Session Expiry Check**: Automatically checks if the current session has expired (3+ minutes)
-5. **Response**: Emits `userActiveRoomResult` with detailed room information
-
-#### **Events:**
-- **Client → Server**: `checkUserActiveRoom` (no payload required)
-- **Server → Client**: `userActiveRoomResult` with `UserActiveRoomResult` data
-
-#### **Response Data:**
-```typescript
-{
-  success: boolean;
-  isInActiveRoom: boolean;
-  currentRoom: {
-    roomId: number;
-    roomName: string;
-    sessionId: number;
-    sessionStatus: string;
-    timeStart: string;
-    isExpired: boolean;
-  } | null;
-  message?: string;
-  error?: string;
-}
-```
-
-#### **Usage Example:**
-```typescript
-const { checkUserActiveRoom } = useGameRoomWebSocket();
-
-const handleCheckActiveRoom = async () => {
-  const result = await checkUserActiveRoom();
-  if (result?.isInActiveRoom) {
-    console.log('User is in room:', result.currentRoom?.roomName);
-    if (result.currentRoom?.isExpired) {
-      console.log('Session has expired, user can join other rooms');
-    }
-  } else {
-    console.log('User is not in any active room');
-  }
-};
-```
-
-#### **Use Cases:**
-- **Check User Status**: Before showing room list, check if user is already in a room
-- **Display Current Room**: Show user which room they're currently in
-- **Session Expiration**: Check if current session has expired
-- **Room Navigation**: Allow user to return to their current room
-
-### 🎯 **Using Automatic Status Broadcasting**
-
-#### **Client-side Implementation:**
-```typescript
-const { userCurrentRoomStatus, checkJoinerInRoom } = useGameRoomWebSocket();
-
-// Listen for automatic status updates
-useEffect(() => {
-  if (userCurrentRoomStatus) {
-    if (userCurrentRoomStatus.isAlreadyInRoom) {
-      console.log('User is in room:', userCurrentRoomStatus.currentRoom);
-      
-      // Check if session has expired
-      if (userCurrentRoomStatus.currentRoom?.isExpired) {
-        console.log('Session expired, user can join other rooms');
-        // Update UI to show user can join other rooms
-      }
-    } else {
-      console.log('User is free to join any room');
-      // Update UI to show all available rooms
-    }
-  }
-}, [userCurrentRoomStatus]);
-
-// Listen for automatic join notifications
-useEffect(() => {
-  // This will be automatically triggered when session status changes
-  const handleAutomaticNotification = (data) => {
-    if (data.message?.includes('can now join other rooms')) {
-      console.log('Automatic notification:', data.message);
-      // Update UI to enable room joining
-    }
-  };
-  
-  // The hook automatically handles these events
-}, []);
-```
-
-#### **Benefits for Developers:**
-- ✅ **No Polling Required**: No need to periodically check user status
-- ✅ **Immediate Updates**: Users get instant notifications when sessions change
-- ✅ **Reduced Complexity**: Eliminates need for manual status checking logic
-- ✅ **Better Performance**: Reduces unnecessary API calls
-- ✅ **Improved UX**: Users always know their current status
 
 ## Session Status Updates
 
@@ -1689,27 +1268,6 @@ useEffect(() => {
 - ✅ **Custom Callbacks**: Support for custom event handlers
 - ✅ **State Management**: Built-in state for easy UI updates
 
-## Session Status Filtering
-
-### 🚫 **Excluded Status: OUT**
-This hook and the underlying WebSocket gateway **exclude sessions with `out` status** from all operations:
-
-- **Room Counts**: Only counts sessions with `pending`, `running`, `end` status
-- **Current Session**: Only returns sessions with valid statuses
-- **Participants**: Only shows participants from active sessions
-- **Real-time Updates**: Only broadcasts updates for valid sessions
-
-### ✅ **Supported Statuses**
-- **PENDING**: Sessions waiting to start
-- **RUNNING**: Active game sessions
-- **END**: Completed game sessions
-
-### 🔧 **Why Exclude OUT?**
-- **Data Integrity**: OUT sessions represent cancelled/failed sessions
-- **Performance**: Reduces unnecessary data processing
-- **User Experience**: Only shows meaningful session data
-- **Business Logic**: OUT sessions don't contribute to room statistics
-
 ## Updated Features
 
 ### 🆕 **Optimized Performance**
@@ -1717,7 +1275,7 @@ This hook and the underlying WebSocket gateway **exclude sessions with `out` sta
 - **Better Type Safety**: Improved TypeScript support
 - **Efficient Data Mapping**: Proper entity relationships
 - **Reduced Database Load**: Optimized queries with proper joins
-- **Filtered Sessions**: Only processes `pending`, `running`, `end` sessions (excludes `out`)
+- **All Session Statuses**: Processes `pending`, `running`, `end`, `out` sessions for comprehensive monitoring
 - **Advanced Caching**: 2-second cache TTL for room counts with automatic invalidation
 - **Smart Debouncing**: 100ms broadcast debouncing and 500ms subscription debouncing
 - **Connection Flexibility**: Supports both WebSocket and polling transports
