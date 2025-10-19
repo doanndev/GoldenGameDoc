@@ -157,6 +157,24 @@ export interface UserActiveRoomResult {
   error?: string;
 }
 
+export interface SessionStatusUpdated {
+  success: boolean;
+  roomId: number;
+  sessionId: number;
+  oldStatus: string;
+  newStatus: string;
+  sessionInfo: {
+    id: number;
+    status: string;
+    timeStart: string;
+    isExpired: boolean;
+    totalAmount: number;
+    totalParticipants: number;
+    participationAmount: number;
+  };
+  message: string;
+}
+
 
 // Hook options
 export interface UseGameRoomWebSocketOptions {
@@ -165,6 +183,7 @@ export interface UseGameRoomWebSocketOptions {
   onConnect?: (info: ConnectionInfo) => void;
   onDisconnect?: () => void;
   onError?: (error: string) => void;
+  onSessionStatusUpdated?: (data: SessionStatusUpdated) => void;
 }
 
 // Hook return type
@@ -189,6 +208,9 @@ export interface UseGameRoomWebSocketReturn {
   getCurrentRoomParticipants: (payload: { roomId: number }) => Promise<RoomParticipants | null>;
   checkUserActiveRoom: () => Promise<UserActiveRoomResult | null>;
   
+  // Session status updates
+  sessionStatusUpdated: SessionStatusUpdated | null;
+  
   // Connection management
   connect: () => void;
   disconnect: () => void;
@@ -207,6 +229,7 @@ export const useGameRoomWebSocket = (
     onConnect,
     onDisconnect,
     onError,
+    onSessionStatusUpdated,
   } = options;
 
   // State
@@ -217,6 +240,7 @@ export const useGameRoomWebSocket = (
   const [currentSession, setCurrentSession] = useState<CurrentSessionSnapshot | null>(null);
   const [roomParticipants, setRoomParticipants] = useState<RoomParticipants | null>(null);
   const [userActiveRoomStatus, setUserActiveRoomStatus] = useState<UserActiveRoomResult | null>(null);
+  const [sessionStatusUpdated, setSessionStatusUpdated] = useState<SessionStatusUpdated | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // Refs
@@ -328,6 +352,13 @@ export const useGameRoomWebSocket = (
         }
       });
 
+      // Session status updated events
+      socket.on('sessionStatusUpdated', (data: SessionStatusUpdated) => {
+        console.log('🔄 Session status updated:', data);
+        setSessionStatusUpdated(data);
+        onSessionStatusUpdated?.(data);
+      });
+
 
       // Error handling
       socket.on('error', (errorData: { message: string }) => {
@@ -354,7 +385,7 @@ export const useGameRoomWebSocket = (
       onError?.(errorMessage);
       setIsConnecting(false);
     }
-  }, [serverUrl, onConnect, onDisconnect, onError]);
+  }, [serverUrl, onConnect, onDisconnect, onError, onSessionStatusUpdated]);
 
   // Disconnect from WebSocket
   const disconnect = useCallback(() => {
@@ -554,6 +585,9 @@ export const useGameRoomWebSocket = (
     // User status
     userActiveRoomStatus,
     
+    // Session status updates
+    sessionStatusUpdated,
+    
     // Connection management
     connect,
     disconnect,
@@ -585,6 +619,7 @@ const GameRoomComponent: React.FC = () => {
     currentSession,
     roomParticipants,
     userCurrentRoomStatus,
+    sessionStatusUpdated,
     subscribeRoomCountByGameType,
     subscribeCurrentSession,
     joinRoom,
@@ -604,6 +639,12 @@ const GameRoomComponent: React.FC = () => {
     },
     onError: (error) => {
       console.error('WebSocket error:', error);
+    },
+    onSessionStatusUpdated: (data) => {
+      console.log('Session status changed:', data);
+      console.log('Old status:', data.oldStatus);
+      console.log('New status:', data.newStatus);
+      console.log('Session info:', data.sessionInfo);
     },
   });
 
@@ -700,6 +741,22 @@ const GameRoomComponent: React.FC = () => {
     }
   };
 
+  // Handle session status updates
+  useEffect(() => {
+    if (sessionStatusUpdated) {
+      console.log('Session status updated:', sessionStatusUpdated);
+      
+      // Show notification based on status change
+      if (sessionStatusUpdated.newStatus === 'running') {
+        alert(`Session ${sessionStatusUpdated.sessionId} is now running!`);
+      } else if (sessionStatusUpdated.newStatus === 'end') {
+        alert(`Session ${sessionStatusUpdated.sessionId} has ended!`);
+      } else if (sessionStatusUpdated.newStatus === 'out') {
+        alert(`Session ${sessionStatusUpdated.sessionId} has expired!`);
+      }
+    }
+  }, [sessionStatusUpdated]);
+
   if (isConnecting) {
     return <div>Connecting to game rooms...</div>;
   }
@@ -794,6 +851,27 @@ const GameRoomComponent: React.FC = () => {
         </div>
       )}
 
+      {sessionStatusUpdated && (
+        <div style={{ backgroundColor: '#f0f8ff', padding: '10px', margin: '10px 0', border: '1px solid #007bff', borderRadius: '4px' }}>
+          <h3>🔄 Session Status Updated</h3>
+          <p><strong>Room ID:</strong> {sessionStatusUpdated.roomId}</p>
+          <p><strong>Session ID:</strong> {sessionStatusUpdated.sessionId}</p>
+          <p><strong>Status Change:</strong> {sessionStatusUpdated.oldStatus} → {sessionStatusUpdated.newStatus}</p>
+          <p><strong>Message:</strong> {sessionStatusUpdated.message}</p>
+          
+          <div style={{ marginTop: '10px' }}>
+            <h4>Session Info:</h4>
+            <p><strong>ID:</strong> {sessionStatusUpdated.sessionInfo.id}</p>
+            <p><strong>Status:</strong> {sessionStatusUpdated.sessionInfo.status}</p>
+            <p><strong>Time Start:</strong> {new Date(sessionStatusUpdated.sessionInfo.timeStart).toLocaleString()}</p>
+            <p><strong>Is Expired:</strong> {sessionStatusUpdated.sessionInfo.isExpired ? 'Yes' : 'No'}</p>
+            <p><strong>Total Amount:</strong> {sessionStatusUpdated.sessionInfo.totalAmount}</p>
+            <p><strong>Total Participants:</strong> {sessionStatusUpdated.sessionInfo.totalParticipants}</p>
+            <p><strong>Participation Amount:</strong> {sessionStatusUpdated.sessionInfo.participationAmount}</p>
+          </div>
+        </div>
+      )}
+
       {roomParticipants && (
         <div>
           <h3>Room Participants ({roomParticipants.totalCount})</h3>
@@ -848,6 +926,7 @@ const GameRoomsPage: React.FC = () => {
     currentSession,
     roomParticipants,
     userCurrentRoomStatus,
+    sessionStatusUpdated,
     subscribeRoomCountByGameType,
     subscribeCurrentSession,
     joinRoom,
@@ -863,6 +942,17 @@ const GameRoomsPage: React.FC = () => {
     },
     onError: (error) => {
       console.error('Game room WebSocket error:', error);
+    },
+    onSessionStatusUpdated: (data) => {
+      console.log('Session status changed:', data);
+      // Handle session status changes
+      if (data.newStatus === 'running') {
+        console.log('Session is now running!');
+      } else if (data.newStatus === 'end') {
+        console.log('Session has ended!');
+      } else if (data.newStatus === 'out') {
+        console.log('Session has expired!');
+      }
     },
   });
 
@@ -882,6 +972,17 @@ const GameRoomsPage: React.FC = () => {
       console.log('Participants updated for room:', roomParticipants.roomId);
     }
   }, [roomParticipants, selectedRoomId]);
+
+  // Listen for session status updates
+  useEffect(() => {
+    if (sessionStatusUpdated) {
+      console.log('Session status updated:', sessionStatusUpdated);
+      // You can add custom logic here based on status changes
+      if (sessionStatusUpdated.roomId === selectedRoomId) {
+        console.log('Status updated for current room:', selectedRoomId);
+      }
+    }
+  }, [sessionStatusUpdated, selectedRoomId]);
 
   const handleJoinRoom = async (roomId: number) => {
     try {
@@ -1081,6 +1182,7 @@ NEXT_PUBLIC_WEBSOCKET_URL=http://localhost:8008
 | `roomParticipantsUpdated` | `RoomParticipants` | Real-time participants update (broadcast) |
 | `currentRoomParticipantsResult` | `RoomParticipants` | Current room participants result |
 | `userActiveRoomResult` | `UserActiveRoomResult` | Result of user active room check (simplified) |
+| `sessionStatusUpdated` | `SessionStatusUpdated` | Session status changed with detailed info |
 | `error` | `{ message: string }` | Error occurred |
 
 ## Features
@@ -1117,7 +1219,15 @@ NEXT_PUBLIC_WEBSOCKET_URL=http://localhost:8008
    - Timeout handling
    - **🆕 Automatic status broadcasting when sessions change**
 
-5. **Error Handling**
+5. **Session Status Updates**
+   - Real-time session status change notifications
+   - Detailed session information on status change
+   - Automatic broadcasting to all connected clients
+   - Session expiration tracking
+   - Total amount and participants count updates
+   - Custom callback support for status changes
+
+6. **Error Handling**
    - Comprehensive error states
    - Error clearing functionality
    - Connection error handling
@@ -1509,6 +1619,75 @@ useEffect(() => {
 - ✅ **Reduced Complexity**: Eliminates need for manual status checking logic
 - ✅ **Better Performance**: Reduces unnecessary API calls
 - ✅ **Improved UX**: Users always know their current status
+
+## Session Status Updates
+
+### 🔄 **Real-time Session Status Notifications**
+The WebSocket gateway now provides real-time notifications when session status changes, allowing clients to react immediately to status updates.
+
+#### **Event: `sessionStatusUpdated`**
+This event is automatically emitted when any session status changes (PENDING → RUNNING → END/OUT).
+
+#### **Event Data Structure:**
+```typescript
+{
+  success: boolean;
+  roomId: number;
+  sessionId: number;
+  oldStatus: string;        // Previous status
+  newStatus: string;        // New status
+  sessionInfo: {
+    id: number;
+    status: string;
+    timeStart: string;
+    isExpired: boolean;
+    totalAmount: number;
+    totalParticipants: number;
+    participationAmount: number;
+  };
+  message: string;          // Human-readable message
+}
+```
+
+#### **Usage Example:**
+```typescript
+const { sessionStatusUpdated } = useGameRoomWebSocket({
+  onSessionStatusUpdated: (data) => {
+    console.log('Session status changed:', data);
+    
+    // Handle different status changes
+    switch (data.newStatus) {
+      case 'running':
+        console.log('Session is now running!');
+        // Update UI to show game is active
+        break;
+      case 'end':
+        console.log('Session has ended!');
+        // Show results or redirect
+        break;
+      case 'out':
+        console.log('Session has expired!');
+        // Allow user to join other rooms
+        break;
+    }
+  }
+});
+
+// Or use the state directly
+useEffect(() => {
+  if (sessionStatusUpdated) {
+    console.log('Status updated:', sessionStatusUpdated);
+    // Your custom logic here
+  }
+}, [sessionStatusUpdated]);
+```
+
+#### **Benefits:**
+- ✅ **Real-time Updates**: Immediate notifications when sessions change
+- ✅ **Detailed Information**: Complete session data with each update
+- ✅ **Automatic Broadcasting**: No need to manually check status
+- ✅ **Custom Callbacks**: Support for custom event handlers
+- ✅ **State Management**: Built-in state for easy UI updates
 
 ## Session Status Filtering
 
