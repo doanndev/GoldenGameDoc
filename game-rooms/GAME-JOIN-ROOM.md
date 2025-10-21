@@ -47,12 +47,12 @@ Tham gia phòng game với session và số tiền cụ thể.
 | Status Code | Message | Description |
 |-------------|---------|-------------|
 | 400 | Bad Request | Dữ liệu đầu vào không hợp lệ |
+| 400 | Insufficient balance. You can view the game now. | So du khong kha dung. Ban chi duoc vao xem |
 | 401 | Unauthorized | Token không hợp lệ hoặc hết hạn |
 | 404 | Session not found | Không tìm thấy session |
 | 404 | Room not found | Không tìm thấy phòng game |
 | 409 | Already joined | Đã tham gia session này rồi |
 | 500 | Internal Server Error | Lỗi server |
-
 ---
 
 ### 2. Get Joiners by Room
