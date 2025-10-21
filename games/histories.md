@@ -21,6 +21,7 @@ GET /game-session-results/history
 | `page` | integer | No | 1 | Số trang (minimum: 1) |
 | `limit` | integer | No | 10 | Số lượng items per page (minimum: 1, maximum: 100) |
 | `bet` | number | No | - | Lọc theo số tiền bet chính xác (minimum: 0) |
+| `type_id` | integer | No | - | Lọc theo loại game (minimum: 1) |
 
 ### Request Example
 
@@ -31,8 +32,11 @@ GET /game-session-results/history?page=1&limit=10
 # Lọc theo bet = 100.5
 GET /game-session-results/history?bet=100.5
 
+# Lọc theo loại game
+GET /game-session-results/history?type_id=1
+
 # Kết hợp pagination và filter
-GET /game-session-results/history?page=2&limit=20&bet=50.0
+GET /game-session-results/history?page=2&limit=20&bet=50.0&type_id=2
 ```
 
 ### Response Format
@@ -153,6 +157,11 @@ curl -X GET "http://localhost:3000/game-session-results/history?page=1&limit=10"
 
 # Lọc theo bet
 curl -X GET "http://localhost:3000/game-session-results/history?bet=100.5" \
+  -H "Content-Type: application/json" \
+  --cookie "access_token=your_jwt_token_here"
+
+# Lọc theo loại game
+curl -X GET "http://localhost:3000/game-session-results/history?type_id=1" \
   -H "Content-Type: application/json" \
   --cookie "access_token=your_jwt_token_here"
 ```
