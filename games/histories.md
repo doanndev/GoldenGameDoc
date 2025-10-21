@@ -22,6 +22,7 @@ GET /game-session-results/history
 | `limit` | integer | No | 10 | Số lượng items per page (minimum: 1, maximum: 100) |
 | `bet` | number | No | - | Lọc theo số tiền bet chính xác (minimum: 0) |
 | `type_id` | integer | No | - | Lọc theo loại game (minimum: 1) |
+| `search` | string | No | - | Tìm kiếm theo tx_hash hoặc room_id |
 
 ### Request Example
 
