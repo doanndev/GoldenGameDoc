@@ -172,7 +172,7 @@ GET /swaps?status=pending&page=1&limit=10
 
 ## 3. Lấy danh sách Swap cảu tất cả user để quản lý cho admin
 
-### `GET /swaps/all
+### `GET /admin/swaps
 
 Lấy danh sách các giao dịch swap theo trạng thái và loại coin.
 
@@ -190,7 +190,7 @@ Lấy danh sách các giao dịch swap theo trạng thái và loại coin.
 
 #### Example Request
 ```
-GET /swaps/all?status=executed&page=1&limit=10
+GET /admin/swaps?status=executed&page=1&limit=10
 ```
 <img width="1863" height="709" alt="image" src="https://github.com/user-attachments/assets/b921b52a-d8b9-4a22-9834-3c3802a8b453" />
 
