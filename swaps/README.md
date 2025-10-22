@@ -170,6 +170,107 @@ GET /swaps?status=pending&page=1&limit=10
 }
 ```
 
+## 3. Lấy danh sách Swap cảu tất cả user để quản lý cho admin
+
+### `GET /swaps/all
+
+Lấy danh sách các giao dịch swap theo trạng thái và loại coin.
+
+#### Query Parameters
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `status` | enum | No | Trạng thái: pending, executed, failed |
+| `page` | number | No | Số trang (mặc định: 1) |
+| `limit` | number | No | Số lượng item per page (mặc định: 10) |
+| `user_username` | number | No | Lọc những gia dịch swap của một user xác định theo username |
+| `user_email` | number | No | Lọc những gia dịch swap của một user xác định theo email |
+| `coin_send` | number | No | Lọc những gia dịch swap với coin_send(SOL/USDT) |
+| `coin_received` | number | No | Lọc những gia dịch swap với coin_received(MPB) |
+| `status` | number | No | Lọc theo trạng thái swap status(failed/executed) |
+
+#### Example Request
+```
+GET /swaps/all?status=executed&page=1&limit=10
+```
+```image
+<img width="1863" height="709" alt="image" src="https://github.com/user-attachments/assets/128b9169-0bcd-4dec-93c8-157dc939d042" />
+```
+#### Response Success (200)
+```json
+{
+    "data": [
+        {
+            "id": 414,
+            "amount_send": "1000",
+            "amount_received": "980",
+            "coin_send": {
+                "id": 2,
+                "symbol": "USDT",
+                "mint": "Gr5D54dHC8neoFBQQuy8ni6S19E5ygg7Ewr3i1x6RRP5",
+                "name": "Tether USD"
+            },
+            "coin_received": {
+                "id": 3,
+                "symbol": "MPB",
+                "mint": "9wcpBxUDTi2K7cXoHsmP7K4S7ZSZpjedQrR3gh1evVNQ",
+                "name": "MPB"
+            },
+            "rate": "1.0204081632653061",
+            "rate_usd_send": "1",
+            "rate_usd_received": "0.98",
+            "status": "executed",
+            "message": "Swap order created successfully",
+            "hash": "4yhZtDimXHogeV42qG1UzVQi4nGBhFSK6h4crTecb7uHms46U3dXDan7GitEnXp4KnkkmZZ9HsgxC7tmPNQGV1Ed",
+            "user": {
+                "id": 142862,
+                "email": "nth149949@gmail.com",
+                "username": "Dautay",
+                "fullname": "Dautay"
+            },
+            "created_at": "2025-10-07T09:28:16.191Z"
+        },
+        {
+            "id": 397,
+            "amount_send": "0.01",
+            "amount_received": "0.0098",
+            "coin_send": {
+                "id": 2,
+                "symbol": "USDT",
+                "mint": "Gr5D54dHC8neoFBQQuy8ni6S19E5ygg7Ewr3i1x6RRP5",
+                "name": "Tether USD"
+            },
+            "coin_received": {
+                "id": 3,
+                "symbol": "MPB",
+                "mint": "9wcpBxUDTi2K7cXoHsmP7K4S7ZSZpjedQrR3gh1evVNQ",
+                "name": "MPB"
+            },
+            "rate": "1.0204081632653061",
+            "rate_usd_send": "1",
+            "rate_usd_received": "0.98",
+            "status": "executed",
+            "message": "Swap order created successfully",
+            "hash": "2FbVGXEMSasnDjKyuExby4UWEy5dCurZtFdLDKpjwUdyydYCpgzjXyvq5JGnRYJshNeqSY8GEN2iwoJ1WdnKUawj",
+            "user": {
+                "id": 142862,
+                "email": "nth149949@gmail.com",
+                "username": "Dautay",
+                "fullname": "Dautay"
+            },
+            "created_at": "2025-09-28T07:46:17.048Z"
+        }
+    ],
+    "pagination": {
+        "page": 1,
+        "limit": 2,
+        "total": 27,
+        "totalPages": 14,
+        "hasNext": true,
+        "hasPrev": false
+    }
+}
+```
+
 ## Data Models
 
 ### TokenType Enum
