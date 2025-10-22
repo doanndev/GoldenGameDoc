@@ -1,6 +1,6 @@
 # Swaps Module - API Documentation
 
-```http
+```
 url https://8w7n4n91-8008.asse.devtunnels.ms/api/v1
 ```
 
