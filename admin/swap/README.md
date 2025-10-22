@@ -33,9 +33,9 @@ GET /admin/swaps?status=executed&page=1&limit=10
 {
     "data": [
         {
-            "id": 414,
-            "amount_send": "1000",
-            "amount_received": "980",
+            "id": 418,
+            "amount_send": "700",
+            "amount_received": "686",
             "coin_send": {
                 "id": 2,
                 "symbol": "USDT",
@@ -53,19 +53,19 @@ GET /admin/swaps?status=executed&page=1&limit=10
             "rate_usd_received": "0.98",
             "status": "executed",
             "message": "Swap order created successfully",
-            "hash": "4yhZtDimXHogeV42qG1UzVQi4nGBhFSK6h4crTecb7uHms46U3dXDan7GitEnXp4KnkkmZZ9HsgxC7tmPNQGV1Ed",
+            "hash": "4fLbZcaRyi7TxEJMQufHTEm5ss3Z6K9GwLEUBvUTb8qWwtGbLTc1mMYBnC5rk4mvrGkX7mLG7CPDproU9L59ebb4",
             "user": {
-                "id": 142862,
-                "email": "nth149949@gmail.com",
-                "username": "Dautay",
-                "fullname": "Dautay"
+                "id": 142910,
+                "email": "hleees88@gmail.com",
+                "username": "valued",
+                "fullname": "valued"
             },
-            "created_at": "2025-10-07T09:28:16.191Z"
+            "created_at": "2025-10-14T07:18:04.125Z"
         },
         {
-            "id": 397,
-            "amount_send": "0.01",
-            "amount_received": "0.0098",
+            "id": 417,
+            "amount_send": "7080.218699",
+            "amount_received": "6938.61432502",
             "coin_send": {
                 "id": 2,
                 "symbol": "USDT",
@@ -81,25 +81,30 @@ GET /admin/swaps?status=executed&page=1&limit=10
             "rate": "1.0204081632653061",
             "rate_usd_send": "1",
             "rate_usd_received": "0.98",
-            "status": "executed",
+            "status": "failed",
             "message": "Swap order created successfully",
-            "hash": "2FbVGXEMSasnDjKyuExby4UWEy5dCurZtFdLDKpjwUdyydYCpgzjXyvq5JGnRYJshNeqSY8GEN2iwoJ1WdnKUawj",
+            "hash": null,
             "user": {
-                "id": 142862,
-                "email": "nth149949@gmail.com",
-                "username": "Dautay",
-                "fullname": "Dautay"
+                "id": 142910,
+                "email": "hleees88@gmail.com",
+                "username": "valued",
+                "fullname": "valued"
             },
-            "created_at": "2025-09-28T07:46:17.048Z"
+            "created_at": "2025-10-14T07:16:57.287Z"
         }
     ],
     "pagination": {
         "page": 1,
         "limit": 2,
-        "total": 27,
-        "totalPages": 14,
+        "total": 413,
+        "totalPages": 207,
         "hasNext": true,
         "hasPrev": false
+    },
+    "statistics": {
+        "total_swaps": 413,
+        "total_executed_swaps": 135,
+        "total_amount_received": 468387.6911068802
     }
 }
 ```
