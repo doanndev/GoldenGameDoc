@@ -192,9 +192,8 @@ Lấy danh sách các giao dịch swap theo trạng thái và loại coin.
 ```
 GET /swaps/all?status=executed&page=1&limit=10
 ```
-```image
-<img width="1863" height="709" alt="image" src="https://github.com/user-attachments/assets/128b9169-0bcd-4dec-93c8-157dc939d042" />
-```
+<img width="1863" height="709" alt="image" src="https://github.com/user-attachments/assets/b921b52a-d8b9-4a22-9834-3c3802a8b453" />
+
 #### Response Success (200)
 ```json
 {
