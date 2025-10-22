@@ -20,6 +20,7 @@ Lấy danh sách các giao dịch swap theo trạng thái và loại coin.
 | `user_email` | number | No | Lọc những gia dịch swap của một user xác định theo email |
 | `coin_send` | number | No | Lọc những gia dịch swap với coin_send(SOL/USDT) |
 | `coin_received` | number | No | Lọc những gia dịch swap với coin_received(MPB) |
+| `wallet_address` | number | No | Lọc theo địa chỉ ví đã swap |
 | `status` | number | No | Lọc theo trạng thái swap status(failed/executed) |
 
 #### Example Request
@@ -58,14 +59,15 @@ GET /admin/swaps?status=executed&page=1&limit=10
                 "id": 142910,
                 "email": "hleees88@gmail.com",
                 "username": "valued",
-                "fullname": "valued"
+                "fullname": "valued",
+                "wallet_address": "74erB61Jq1QvhrgEk59qN9Vystfa76eruV4t1P3kLnmU"
             },
             "created_at": "2025-10-14T07:18:04.125Z"
         },
         {
-            "id": 417,
-            "amount_send": "7080.218699",
-            "amount_received": "6938.61432502",
+            "id": 414,
+            "amount_send": "1000",
+            "amount_received": "980",
             "coin_send": {
                 "id": 2,
                 "symbol": "USDT",
@@ -81,23 +83,24 @@ GET /admin/swaps?status=executed&page=1&limit=10
             "rate": "1.0204081632653061",
             "rate_usd_send": "1",
             "rate_usd_received": "0.98",
-            "status": "failed",
+            "status": "executed",
             "message": "Swap order created successfully",
-            "hash": null,
+            "hash": "4yhZtDimXHogeV42qG1UzVQi4nGBhFSK6h4crTecb7uHms46U3dXDan7GitEnXp4KnkkmZZ9HsgxC7tmPNQGV1Ed",
             "user": {
-                "id": 142910,
-                "email": "hleees88@gmail.com",
-                "username": "valued",
-                "fullname": "valued"
+                "id": 142862,
+                "email": "nth149949@gmail.com",
+                "username": "Dautay",
+                "fullname": "Dautay",
+                "wallet_address": "74erB61Jq1QvhrgEk59qN9Vystfa76eruV4t1P3kLnmU"
             },
-            "created_at": "2025-10-14T07:16:57.287Z"
+            "created_at": "2025-10-07T09:28:16.191Z"
         }
     ],
     "pagination": {
         "page": 1,
         "limit": 2,
-        "total": 413,
-        "totalPages": 207,
+        "total": 19,
+        "totalPages": 10,
         "hasNext": true,
         "hasPrev": false
     },
