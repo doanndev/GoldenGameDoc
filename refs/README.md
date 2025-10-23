@@ -4,7 +4,7 @@ This document provides comprehensive documentation for the Smart Referral system
 
 ## Base URL
 ```
-/smart-ref
+http://localhost:3000/smart-ref
 ```
 
 ## Authentication
@@ -221,7 +221,78 @@ curl -X GET "http://localhost:3000/smart-ref/my-commission" \
 
 ---
 
-## 3. Get Level Commission Settings
+## 3. Withdraw Commission
+
+### Endpoint
+```
+POST /smart-ref/withdraw
+```
+
+### Description
+Withdraws all available commission in MBP. This will mark all available rewards as withdrawn and create a withdrawal history record with pending status.
+
+### Authentication
+This endpoint requires JWT authentication via HTTP-only cookies. The user ID is automatically extracted from the JWT token.
+
+### Parameters
+No parameters required. The user ID is obtained from the authenticated JWT token.
+
+### Response Format
+
+#### Success Response (200 OK)
+```json
+{
+  "success": true,
+  "message": "Commission withdrawal request submitted successfully",
+  "data": {
+    "user_id": 1,
+    "username": "john_doe",
+    "referral_code": "REF123456",
+    "total_withdrawn_mpb": 125.50,
+    "rewards_count": 15,
+    "withdraw_id": "123",
+    "status": "pending",
+    "created_at": "2025-01-15T10:30:00.000Z"
+  }
+}
+```
+
+#### Error Response (400 Bad Request)
+```json
+{
+  "success": false,
+  "message": "No available commission to withdraw",
+  "data": null
+}
+```
+
+#### Error Response (404 Not Found)
+```json
+{
+  "success": false,
+  "message": "User not found",
+  "data": null
+}
+```
+
+#### Error Response (500 Internal Server Error)
+```json
+{
+  "success": false,
+  "message": "Error processing commission withdrawal",
+  "data": null
+}
+```
+
+### Example Usage
+```bash
+curl -X POST "http://localhost:3000/smart-ref/withdraw" \
+  --cookie "jwt=your-jwt-token"
+```
+
+---
+
+## 4. Get Level Commission Settings
 
 ### Endpoint
 ```
@@ -402,6 +473,20 @@ interface LevelCommission {
 
 ```
 
+### Withdraw Commission
+```typescript
+interface WithdrawCommissionData {
+  user_id: number;
+  username: string;
+  referral_code: string;
+  total_withdrawn_mpb: number;
+  rewards_count: number;
+  withdraw_id: string; // References ref_withdraw_histories.id
+  status: string;
+  created_at: string; // ISO 8601 format
+}
+```
+
 ### Level Settings
 ```typescript
 interface LevelSettingsSummary {
@@ -461,6 +546,7 @@ All endpoints are subject to rate limiting. Please refer to the main API documen
 7. **Earnings Breakdown**: Each referral includes detailed earnings information showing total, available, and withdrawn MBP amounts along with reward count.
 8. **Referral Codes**: All referral codes are exactly 8 characters long, containing only letters and numbers (alphanumeric).
 9. **Authentication**: JWT tokens are stored in HTTP-only cookies for enhanced security, preventing XSS attacks.
+10. **Commission Withdrawal**: Users can withdraw all available commission at once. The system marks all available rewards as withdrawn and creates a pending withdrawal record for blockchain processing.
 
 ---
 
