@@ -18,7 +18,7 @@ Lấy danh sách các giao dịch swap theo trạng thái và loại coin.
 | `limit` | number | No | Số lượng item per page (mặc định: 10) |
 | `search` | number | No | Lọc, tìm kiếm theo tên đồng gửi, nhận, user swap: username, địa chỉ ví, không tìm kiếm theo status |
 | `date` | number | No | Lọc ngày swap |
-| `status` | number | No | Lọc theo status(executed, failed) |
+| `status` | number | No | Lọc theo status(executed, failed, pending) |
 
 #### Example Request
 ```
