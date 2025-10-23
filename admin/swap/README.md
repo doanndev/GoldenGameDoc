@@ -28,9 +28,9 @@ GET /admin/swaps?search=SOL&page=1&limit=10
 {
     "data": [
         {
-            "id": 399,
-            "amount_send": "0.001",
-            "amount_received": "0.1979208",
+            "id": 412,
+            "amount_send": "0.0005",
+            "amount_received": "0.09172310000000002",
             "coin_send": {
                 "id": 1,
                 "symbol": "SOL",
@@ -43,30 +43,30 @@ GET /admin/swaps?search=SOL&page=1&limit=10
                 "mint": "9wcpBxUDTi2K7cXoHsmP7K4S7ZSZpjedQrR3gh1evVNQ",
                 "name": "MPB"
             },
-            "rate": "0.005052526060929422",
+            "rate": "0.005451189504061681",
             "rate_usd_send": "1",
-            "rate_usd_received": "197.9208",
+            "rate_usd_received": "183.44620000000003",
             "status": "executed",
             "message": "Swap order created successfully",
-            "hash": "287ybK1p1mASjvo9PGXiFBJfSBp3Zjo5JJHxYNprGLgwRuVLbhS6QjLH7QaUs675Bk33ED8yQwLREg8WbE53iWaj",
+            "hash": "SXUdZ4KQENULBRF9xwnZeLbs3BP1nTNnqwDCXSJLCCNdeuVUAkASS7p472oL9nACavChWz13aRnLwdgvzSCWt6Y",
+            "wallet_address": "B3p3RCV2XCrpNf6Hucxg6JvCWScAe6i96uYbAZhXYhSh",
             "user": {
-                "id": 142862,
-                "email": "nth149949@gmail.com",
-                "username": "Dautay",
-                "fullname": "Dautay",
-                "wallet_address": "74erB61Jq1QvhrgEk59qN9Vystfa76eruV4t1P3kLnmU"
+                "id": 142881,
+                "email": "vannn.quy@gmail.com",
+                "username": "lvq",
+                "fullname": "Lê Văn Quý"
             },
-            "created_at": "2025-09-28T07:54:32.604Z"
+            "created_at": "2025-10-23T07:10:12.676Z"
         },
         {
-            "id": 398,
-            "amount_send": "0.001",
-            "amount_received": "0.1979208",
+            "id": 411,
+            "amount_send": "20",
+            "amount_received": "19.599999999999998",
             "coin_send": {
-                "id": 1,
-                "symbol": "SOL",
-                "mint": "None",
-                "name": "Solana"
+                "id": 2,
+                "symbol": "USDT",
+                "mint": "Gr5D54dHC8neoFBQQuy8ni6S19E5ygg7Ewr3i1x6RRP5",
+                "name": "Tether USD"
             },
             "coin_received": {
                 "id": 3,
@@ -74,28 +74,28 @@ GET /admin/swaps?search=SOL&page=1&limit=10
                 "mint": "9wcpBxUDTi2K7cXoHsmP7K4S7ZSZpjedQrR3gh1evVNQ",
                 "name": "MPB"
             },
-            "rate": "0.005052526060929422",
+            "rate": "1.0204081632653061",
             "rate_usd_send": "1",
-            "rate_usd_received": "197.9208",
+            "rate_usd_received": "0.9799999999999999",
             "status": "executed",
             "message": "Swap order created successfully",
-            "hash": "26d9vViGEMNBccfgiQteH71DdtqZx9RNaVt84URbvDpdnzAkKiDUCdgvNzdYr1ybKhavGa5hit6QejuTVoajdaTT",
+            "hash": "5rXLW2u3nQYfGmb67Cq7FELdF3TMyGsFoUeXtzdp3rGwC9qiJUmpTKdDApjTQGnowgzPf5Jp1hRp2pFVejtUXXoW",
+            "wallet_address": "B3p3RCV2XCrpNf6Hucxg6JvCWScAe6i96uYbAZhXYhSh",
             "user": {
-                "id": 142862,
-                "email": "nth149949@gmail.com",
-                "username": "Dautay",
-                "fullname": "Dautay",
-                "wallet_address": "74erB61Jq1QvhrgEk59qN9Vystfa76eruV4t1P3kLnmU"
+                "id": 142881,
+                "email": "vannn.quy@gmail.com",
+                "username": "lvq",
+                "fullname": "Lê Văn Quý"
             },
-            "created_at": "2025-09-28T07:53:41.488Z"
+            "created_at": "2025-10-23T07:09:50.956Z"
         }
     ],
     "pagination": {
         "page": 1,
-        "limit": 2,
-        "total": 250,
-        "totalPages": 125,
-        "hasNext": true,
+        "limit": 10,
+        "total": 2,
+        "totalPages": 1,
+        "hasNext": false,
         "hasPrev": false
     }
 }
