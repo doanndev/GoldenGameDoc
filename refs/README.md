@@ -2,17 +2,6 @@
 
 This document provides comprehensive documentation for the Smart Referral system APIs.
 
-## Base URL
-```
-/smart-ref
-```
-
-## Authentication
-All endpoints require JWT authentication. Include the JWT token in the Authorization header:
-```
-Authorization: Bearer <your-jwt-token>
-```
-
 **Important Notes:**
 - All endpoints are protected with JWT authentication
 - User-specific endpoints (`my-stats`, `my-commission`) automatically use the authenticated user's ID from the JWT token
