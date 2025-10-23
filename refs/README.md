@@ -4,7 +4,7 @@ This document provides comprehensive documentation for the Smart Referral system
 
 ## Base URL
 ```
-http://localhost:3000/smart-ref
+/smart-ref
 ```
 
 ## Authentication
