@@ -2,10 +2,19 @@
 
 This document provides comprehensive documentation for the Smart Referral system APIs.
 
+## Base URL
+```
+http://localhost:3000/smart-ref
+```
+
+## Authentication
+All endpoints require JWT authentication using HTTP-only cookies. The JWT token is automatically sent with each request via cookies.
+
 **Important Notes:**
-- All endpoints are protected with JWT authentication
+- All endpoints are protected with JWT authentication via HTTP-only cookies
 - User-specific endpoints (`my-stats`, `my-commission`) automatically use the authenticated user's ID from the JWT token
 - No need to pass user ID as a parameter for user-specific endpoints
+- No need to manually include Authorization headers - cookies are handled automatically by the browser
 
 ---
 
@@ -20,7 +29,7 @@ GET /smart-ref/my-stats
 Retrieves comprehensive referral statistics for the authenticated user, including total referrals, active referrals, earnings, and referrals categorized by level.
 
 ### Authentication
-This endpoint requires JWT authentication. The user ID is automatically extracted from the JWT token.
+This endpoint requires JWT authentication via HTTP-only cookies. The user ID is automatically extracted from the JWT token.
 
 ### Parameters
 No parameters required. The user ID is obtained from the authenticated JWT token.
@@ -42,20 +51,36 @@ No parameters required. The user ID is obtained from the authenticated JWT token
     "stats": {
       "total_refs": 15,
       "active_refs": 12,
-      "total_earning": 125.50,
+      "total_earning_mpb": 125.50,
       "refs_by_level": {
         "1": [
           {
             "user_id": 2,
             "username": "jane_smith",
             "referral_code": "REF789012",
-            "created_at": "2025-01-02T10:30:00.000Z"
+            "created_at": "2025-01-02T10:30:00.000Z",
+            "status": "active",
+            "is_active": true,
+            "earnings": {
+              "total_mpb": 25.50,
+              "available_mpb": 15.30,
+              "withdrawn_mpb": 10.20,
+              "reward_count": 3
+            }
           },
           {
             "user_id": 3,
             "username": "bob_wilson",
             "referral_code": "REF345678",
-            "created_at": "2025-01-03T14:20:00.000Z"
+            "created_at": "2025-01-03T14:20:00.000Z",
+            "status": "active",
+            "is_active": true,
+            "earnings": {
+              "total_mpb": 18.75,
+              "available_mpb": 8.75,
+              "withdrawn_mpb": 10.00,
+              "reward_count": 2
+            }
           }
         ],
         "2": [
@@ -63,7 +88,15 @@ No parameters required. The user ID is obtained from the authenticated JWT token
             "user_id": 4,
             "username": "alice_brown",
             "referral_code": "REF901234",
-            "created_at": "2025-01-04T09:15:00.000Z"
+            "created_at": "2025-01-04T09:15:00.000Z",
+            "status": "block",
+            "is_active": false,
+            "earnings": {
+              "total_mpb": 12.25,
+              "available_mpb": 0.00,
+              "withdrawn_mpb": 12.25,
+              "reward_count": 1
+            }
           }
         ]
       }
@@ -93,7 +126,7 @@ No parameters required. The user ID is obtained from the authenticated JWT token
 ### Example Usage
 ```bash
 curl -X GET "http://localhost:3000/smart-ref/my-stats" \
-  -H "Authorization: Bearer your-jwt-token"
+  --cookie "jwt=your-jwt-token"
 ```
 
 ---
@@ -109,7 +142,7 @@ GET /smart-ref/my-commission
 Retrieves detailed commission information for the authenticated user, including total earnings, available/withdrawn amounts, and breakdown by level.
 
 ### Authentication
-This endpoint requires JWT authentication. The user ID is automatically extracted from the JWT token.
+This endpoint requires JWT authentication via HTTP-only cookies. The user ID is automatically extracted from the JWT token.
 
 ### Parameters
 No parameters required. The user ID is obtained from the authenticated JWT token.
@@ -157,30 +190,6 @@ No parameters required. The user ID is obtained from the authenticated JWT token
         "withdrawn_sol": 0.14,
         "count": 4
       }
-    ],
-    "recent_rewards": [
-      {
-        "id": 101,
-        "level": 1,
-        "from_user": "jane_smith",
-        "from_referral_code": "REF789012",
-        "usd_value": 12.50,
-        "sol_value": 0.08,
-        "withdraw_status": false,
-        "withdraw_id": null,
-        "created_at": "2025-01-15T10:30:00.000Z"
-      },
-      {
-        "id": 102,
-        "level": 2,
-        "from_user": "bob_wilson",
-        "from_referral_code": "REF345678",
-        "usd_value": 8.75,
-        "sol_value": 0.06,
-        "withdraw_status": true,
-        "withdraw_id": 201,
-        "created_at": "2025-01-14T15:45:00.000Z"
-      }
     ]
   }
 }
@@ -207,7 +216,7 @@ No parameters required. The user ID is obtained from the authenticated JWT token
 ### Example Usage
 ```bash
 curl -X GET "http://localhost:3000/smart-ref/my-commission" \
-  -H "Authorization: Bearer your-jwt-token"
+  --cookie "jwt=your-jwt-token"
 ```
 
 ---
@@ -223,7 +232,7 @@ GET /smart-ref/level-settings
 Retrieves all active level commission settings, including commission percentages for each level.
 
 ### Authentication
-This endpoint requires JWT authentication.
+This endpoint requires JWT authentication via HTTP-only cookies.
 
 ### Parameters
 No parameters required.
@@ -324,7 +333,7 @@ No parameters required.
 ### Example Usage
 ```bash
 curl -X GET "http://localhost:3000/smart-ref/level-settings" \
-  -H "Authorization: Bearer your-jwt-token"
+  --cookie "jwt=your-jwt-token"
 ```
 
 ---
@@ -346,7 +355,7 @@ interface UserInfo {
 interface ReferralStats {
   total_refs: number;
   active_refs: number;
-  total_earning: number;
+  total_earning_mpb: number;
   refs_by_level: {
     [level: string]: ReferralUser[];
   };
@@ -357,6 +366,14 @@ interface ReferralUser {
   username: string;
   referral_code: string;
   created_at: string; // ISO 8601 format
+  status: string;
+  is_active: boolean;
+  earnings: {
+    total_mpb: number;
+    available_mpb: number;
+    withdrawn_mpb: number;
+    reward_count: number;
+  };
 }
 ```
 
@@ -383,17 +400,6 @@ interface LevelCommission {
   count: number;
 }
 
-interface RecentReward {
-  id: number;
-  level: number;
-  from_user: string;
-  from_referral_code: string;
-  usd_value: number;
-  sol_value: number;
-  withdraw_status: boolean;
-  withdraw_id: number | null;
-  created_at: string; // ISO 8601 format
-}
 ```
 
 ### Level Settings
@@ -433,7 +439,7 @@ interface ErrorResponse {
 | Status Code | Description |
 |-------------|-------------|
 | 200 | Success |
-| 401 | Unauthorized - Missing or invalid JWT token |
+| 401 | Unauthorized - Missing or invalid JWT token in HTTP-only cookie |
 | 500 | Internal Server Error - Server-side error |
 
 ---
@@ -449,8 +455,12 @@ All endpoints are subject to rate limiting. Please refer to the main API documen
 1. **Decimal Precision**: All monetary values are rounded to 5 decimal places for consistency.
 2. **Date Format**: All dates are returned in ISO 8601 format (UTC).
 3. **Level Limits**: The system supports up to 7 referral levels as configured.
-4. **Active Referrals**: Currently, all referrals are considered active. Future versions may include activity-based filtering.
+4. **Active Referrals**: Active referrals are defined as users with status not equal to 'block'. Blocked users are excluded from active referral counts.
 5. **Commission Calculation**: Commissions are calculated based on trading volume and level percentages as configured in the system.
+6. **Currency**: The `getUserRefStats` API returns earnings in MBP (token_reward) instead of USD for better token-based tracking.
+7. **Earnings Breakdown**: Each referral includes detailed earnings information showing total, available, and withdrawn MBP amounts along with reward count.
+8. **Referral Codes**: All referral codes are exactly 8 characters long, containing only letters and numbers (alphanumeric).
+9. **Authentication**: JWT tokens are stored in HTTP-only cookies for enhanced security, preventing XSS attacks.
 
 ---
 
