@@ -20,7 +20,7 @@ Lấy danh sách các giao dịch swap theo trạng thái và loại coin.
 
 #### Example Request
 ```
-GET /admin/swaps?status=executed&page=1&limit=10
+GET /admin/swaps?search=SOL&page=1&limit=10
 ```
 
 #### Response Success (200)
@@ -115,7 +115,6 @@ Lấy danh sách các giao dịch swap theo trạng thái và loại coin.
 ```
 GET /admin/swaps/counts
 ```
-<img width="1899" height="700" alt="image" src="https://github.com/user-attachments/assets/89d781c8-0a5e-49ec-bd2f-90092fd23342" />
 
 #### Response Success (200)
 ```json
