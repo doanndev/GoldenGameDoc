@@ -8,10 +8,15 @@ http://localhost:3000/smart-ref
 ```
 
 ## Authentication
-All endpoints require proper authentication. Include the JWT token in the Authorization header:
+All endpoints require JWT authentication. Include the JWT token in the Authorization header:
 ```
 Authorization: Bearer <your-jwt-token>
 ```
+
+**Important Notes:**
+- All endpoints are protected with JWT authentication
+- User-specific endpoints (`my-stats`, `my-commission`) automatically use the authenticated user's ID from the JWT token
+- No need to pass user ID as a parameter for user-specific endpoints
 
 ---
 
@@ -19,16 +24,17 @@ Authorization: Bearer <your-jwt-token>
 
 ### Endpoint
 ```
-GET /smart-ref/user/:userId/stats
+GET /smart-ref/my-stats
 ```
 
 ### Description
-Retrieves comprehensive referral statistics for a specific user, including total referrals, active referrals, earnings, and referrals categorized by level.
+Retrieves comprehensive referral statistics for the authenticated user, including total referrals, active referrals, earnings, and referrals categorized by level.
+
+### Authentication
+This endpoint requires JWT authentication. The user ID is automatically extracted from the JWT token.
 
 ### Parameters
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| userId | integer | Yes | The ID of the user to get statistics for |
+No parameters required. The user ID is obtained from the authenticated JWT token.
 
 ### Response Format
 
@@ -97,7 +103,7 @@ Retrieves comprehensive referral statistics for a specific user, including total
 
 ### Example Usage
 ```bash
-curl -X GET "http://localhost:3000/smart-ref/user/1/stats" \
+curl -X GET "http://localhost:3000/smart-ref/my-stats" \
   -H "Authorization: Bearer your-jwt-token"
 ```
 
@@ -107,16 +113,17 @@ curl -X GET "http://localhost:3000/smart-ref/user/1/stats" \
 
 ### Endpoint
 ```
-GET /smart-ref/user/:userId/commission
+GET /smart-ref/my-commission
 ```
 
 ### Description
-Retrieves detailed commission information for a specific user, including total earnings, available/withdrawn amounts, and breakdown by level.
+Retrieves detailed commission information for the authenticated user, including total earnings, available/withdrawn amounts, and breakdown by level.
+
+### Authentication
+This endpoint requires JWT authentication. The user ID is automatically extracted from the JWT token.
 
 ### Parameters
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| userId | integer | Yes | The ID of the user to get commission information for |
+No parameters required. The user ID is obtained from the authenticated JWT token.
 
 ### Response Format
 
@@ -210,7 +217,7 @@ Retrieves detailed commission information for a specific user, including total e
 
 ### Example Usage
 ```bash
-curl -X GET "http://localhost:3000/smart-ref/user/1/commission" \
+curl -X GET "http://localhost:3000/smart-ref/my-commission" \
   -H "Authorization: Bearer your-jwt-token"
 ```
 
@@ -225,6 +232,9 @@ GET /smart-ref/level-settings
 
 ### Description
 Retrieves all active level commission settings, including commission percentages for each level.
+
+### Authentication
+This endpoint requires JWT authentication.
 
 ### Parameters
 No parameters required.
@@ -434,9 +444,7 @@ interface ErrorResponse {
 | Status Code | Description |
 |-------------|-------------|
 | 200 | Success |
-| 400 | Bad Request - Invalid parameters |
-| 401 | Unauthorized - Missing or invalid token |
-| 404 | Not Found - User or resource not found |
+| 401 | Unauthorized - Missing or invalid JWT token |
 | 500 | Internal Server Error - Server-side error |
 
 ---
