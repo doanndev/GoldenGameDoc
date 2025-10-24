@@ -50,6 +50,8 @@ GET /admin/users?search=john&status=active&page=1&limit=10
     }
   ],
   "total": 100,
+  "blocked_users_count": 20,
+  "master_users_count": 10,
   "page": 1,
   "limit": 10,
   "total_pages": 10
