@@ -60,7 +60,8 @@ Gửi mã xác thực đến email của người dùng để đăng ký tài kh
   "code": "123456",
   "username": "johndoe",
   "fullname": "John Doe",
-  "password": "SecurePass123!"
+  "password": "SecurePass123!",
+  "ref": "REF12345"
 }
 ```
 
