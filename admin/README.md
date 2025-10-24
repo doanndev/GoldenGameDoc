@@ -151,26 +151,38 @@ curl -X POST http://localhost:3000/admin/auth/refresh \
   "admins": [
     {
       "id": 1,
-      "username": "superadmin",
-      "email": "superadmin@goldengame.com",
-      "fullname": "Super Administrator",
-      "avatar": null,
-      "phone": null,
-      "level": "super_admin",
+      "username": "admin_user",
+      "email": "admin@example.com",
+      "fullname": "Admin User",
+      "avatar": "https://example.com/avatar.jpg",
+      "phone": "+1234567890",
+      "level": "admin",
       "role": {
         "id": 1,
-        "name": "Super Admin",
-        "description": "Full system access with all permissions"
+        "name": "Administrator",
+        "description": "Full access administrator"
       },
-      "last_login": "2025-01-10T10:30:00.000Z",
-      "last_ip": "127.0.0.1",
+      "last_login": "2024-01-15T10:30:00.000Z",
+      "last_ip": "192.168.1.100",
       "status": "active",
-      "two_factor_enabled": false,
-      "created_at": "2025-01-10T10:30:00.000Z",
-      "updated_at": "2025-01-10T10:30:00.000Z"
+      "two_factor_enabled": true,
+      "created_at": "2024-01-01T00:00:00.000Z",
+      "updated_at": "2024-01-15T10:30:00.000Z"
     }
   ],
-  "total": 1
+  "total": 25,
+  "page": 1,
+  "limit": 10,
+  "totalPages": 3,
+  "hasNext": true,
+  "hasPrev": false,
+  "document_count": 25,
+  "level_stats": {
+    "support": 5,
+    "moderator": 8,
+    "admin": 10,
+    "super_admin": 2
+  }
 }
 ```
 
@@ -179,6 +191,37 @@ curl -X POST http://localhost:3000/admin/auth/refresh \
 curl -X GET http://localhost:3000/admin/list \
   -H "Authorization: Bearer <admin_jwt_token>"
 ```
+### 1. Lấy tất cả admins (trang đầu tiên)
+```bash
+GET /admin/list
+```
+
+### 2. Phân trang
+```bash
+GET /admin/list?page=2&limit=5
+```
+
+### 3. Tìm kiếm
+```bash
+GET /admin/list?search=admin
+```
+
+### 4. Lọc theo trạng thái
+```bash
+GET /admin/list?status=active
+```
+
+### 5. Lọc theo level
+```bash
+GET /admin/list?level=admin
+```
+
+### 6. Kết hợp các filter
+```bash
+GET /admin/list?search=john&status=active&level=moderator&page=1&limit=20
+```
+
+
 
 ---
 
@@ -343,24 +386,43 @@ curl -X DELETE http://localhost:3000/admin/1 \
   "roles": [
     {
       "id": 1,
-      "name": "Super Admin",
-      "description": "Full system access with all permissions",
+      "name": "admin",
+      "description": "Administrator role",
       "status": "active",
-      "created_at": "2025-01-10T10:30:00.000Z",
-      "updated_at": "2025-01-10T10:30:00.000Z",
-    },
-    {
-      "id": 2,
-      "name": "Admin",
-      "description": "Standard admin role",
-      "status": "active",
-      "created_at": "2025-01-10T10:30:00.000Z",
-      "updated_at": "2025-01-10T10:30:00.000Z",
+      "created_at": "2024-01-01T00:00:00.000Z",
+      "updated_at": "2024-01-01T00:00:00.000Z"
     }
   ],
-  "total": 2
+  "total": 25,
+  "page": 1,
+  "limit": 10,
+  "totalPages": 3,
+  "hasNext": true,
+  "hasPrev": false
 }
 ```
+
+
+### 2. Phân trang
+```bash
+GET /admin/roles?page=2&limit=5
+```
+
+### 3. Tìm kiếm
+```bash
+GET /admin/roles?search=admin
+```
+
+### 4. Lọc theo trạng thái
+```bash
+GET /admin/roles?status=active
+```
+
+### 5. Kết hợp các filter
+```bash
+GET /admin/roles?search=user&status=active&page=1&limit=20
+```
+
 
 **cURL Example:**
 ```bash
