@@ -52,8 +52,7 @@ Module BG Ref cung cấp hệ thống affiliate ưu tiên với khả năng cấ
 **Request Body:**
 ```json
 {
-  "code": "google_auth_code",
-  "path": "optional_path"
+  "code": "google_auth_code"
 }
 ```
 
