@@ -379,7 +379,6 @@ Lấy cấu trúc cây affiliate của user đang đăng nhập với thống k�
           "referral_code": "REF456"
         },
         "stats": {
-          "total_volume": 1500.75,
           "total_reward": 75.25,
           "total_transactions": 25
         },
@@ -399,7 +398,6 @@ Lấy cấu trúc cây affiliate của user đang đăng nhập với thống k�
               "referral_code": "REF789"
             },
             "stats": {
-              "total_volume": 800.50,
               "total_reward": 40.25,
               "total_transactions": 12
             },
@@ -419,6 +417,98 @@ Lấy cấu trúc cây affiliate của user đang đăng nhập với thống k�
   "message": "Get affiliate tree successfully",
   "data": {
     "is_bg_affiliate": false
+  }
+}
+```
+
+### 11. Thống kê Downline
+**GET** `/bg-ref/downline-stats`
+
+Lấy thống kê chi tiết về downline của user đang đăng nhập.
+
+**Headers:**
+- `Authorization: Bearer <access_token>` hoặc `bg_access_token` cookie
+
+**Query Parameters:**
+- `level` (optional): Lọc theo level cụ thể (1, 2, 3, ...)
+- `min_commission` (optional): Lọc theo commission tối thiểu
+- `max_commission` (optional): Lọc theo commission tối đa
+- `min_transactions` (optional): Lọc theo số giao dịch tối thiểu
+- `max_transactions` (optional): Lọc theo số giao dịch tối đa
+- `sort_by` (optional): Sắp xếp theo `commission`, `transactions`, `level`, `created_at` (mặc định: `commission`)
+- `sort_order` (optional): Thứ tự sắp xếp `asc` hoặc `desc` (mặc định: `desc`)
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Get downline stats successfully",
+  "data": {
+    "is_bg_affiliate": true,
+    "total_members": 15,
+    "members_by_level": {
+      "1": 5,
+      "2": 7,
+      "3": 3
+    },
+    "total_commission_earned": 1250.75,
+    "total_transactions": 89,
+    "stats": {
+      "1": {
+        "count": 5,
+        "total_commission": 750.50,
+        "total_transactions": 45
+      },
+      "2": {
+        "count": 7,
+        "total_commission": 400.25,
+        "total_transactions": 32
+      },
+      "3": {
+        "count": 3,
+        "total_commission": 100.00,
+        "total_transactions": 12
+      }
+    },
+    "detailed_members": [
+      {
+        "user_id": 456,
+        "level": 1,
+        "commission_percent": 10.0,
+        "total_commission": 150.75,
+        "total_transactions": 8,
+        "last_transaction_date": "2024-01-15T10:30:00.000Z",
+        "bg_alias": "Level 1 User",
+        "user_info": {
+          "username": "user456",
+          "email": "user456@example.com",
+          "fullname": "User 456",
+          "referral_code": "REF456",
+          "status": "active"
+        },
+        "wallet_info": {
+          "address": "ABC123...",
+          "type": "main"
+        }
+      }
+    ]
+  }
+}
+```
+
+**Case: User không thuộc BG Affiliate System**
+```json
+{
+  "success": true,
+  "message": "Get downline stats successfully",
+  "data": {
+    "is_bg_affiliate": false,
+    "total_members": 0,
+    "members_by_level": {},
+    "total_commission_earned": 0,
+    "total_transactions": 0,
+    "stats": {},
+    "detailed_members": []
   }
 }
 ```
@@ -621,6 +711,14 @@ curl -X GET /bg-ref/bg-affiliate-stats \
 
 # 8. Lấy cấu trúc cây affiliate
 curl -X GET /bg-ref/trees \
+  -H "Authorization: Bearer <access_token>"
+
+# 9. Lấy thống kê downline
+curl -X GET /bg-ref/downline-stats \
+  -H "Authorization: Bearer <access_token>"
+
+# Với filters
+curl -X GET "/bg-ref/downline-stats?level=1&min_commission=100&sort_by=commission&sort_order=desc" \
   -H "Authorization: Bearer <access_token>"
 ```
 
