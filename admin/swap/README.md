@@ -20,6 +20,16 @@ Lấy danh sách các giao dịch swap theo trạng thái và loại coin.
 | `date` | number | No | Lọc ngày swap |
 | `status` | number | No | Lọc theo status(executed, failed, pending) |
 
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `search` | string | Yes | Search term is too long. Maximum 255 characters allowed./Invalid search pattern detected.|
+
+``example
+search: string - vchsagsdajhgujdsjhc izhcihsdafhkdfgboljgfjzihczhn izshdvfikvkjzcvzvbnnnnnnnnxvxfdhdfhgbfdgdsgdfgfd  fdcrthfdrthgbfdtryfdgvtryhfdysdhyfdhyufdjhngfchfghgfhfhfhfẻgtdsegyfvghdtjjbjjjjjjjjjjcvcxbvbgnnnnnnnnsdvdvgzxdvszdvgfdfhfdhgfhjggfthjygfthyfghvtrdfe4tgrfdyfdcgyt5fdcx
+
+seach: number - 111111111111111111111111111111111111111111111111
+```
+
 #### Example Request
 ```
 GET /admin/swaps?search=SOL&page=1&limit=10
