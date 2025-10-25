@@ -77,6 +77,8 @@ Lấy danh sách phòng game với phân trang và bộ lọc.
 | `current_session_status` | string\|null | Trạng thái session hiện tại |
 | `total_sessions` | number | Tổng số sessions |
 | `total_amount` | number | Tổng số tiền thu được |
+| `total_prizes` | number | Tổng số tiền trả thưởng |
+| `pnl_rate` | number | Lợi nhuận |
 | `current_players_count` | number | Số người chơi hiện tại |
 
 ---
@@ -112,6 +114,8 @@ Không có query parameters.
 |-------|------|-------------|
 | `total_rooms` | number | Tổng số phòng game |
 | `total_amount` | number | Tổng số tiền thu được từ tất cả phòng |
+| `total_prizes` | number | Tổng số tiền trả thưởng của tất cả phòng |
+| `pnl_rate` | number | Lợi nhuận của tất cả các phòng |
 | `rooms_running` | number | Số phòng đang chạy (session mới nhất có status = 'running') |
 | `rooms_pending` | number | Số phòng đang chờ (session mới nhất có status = 'pending') |
 
