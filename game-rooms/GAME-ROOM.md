@@ -183,38 +183,40 @@ GET /game-rooms/find-by-id?room_id=123
 #### Success Response (200)
 ```json
 {
-    "id": 280,
-    "name": "Phong game ma soi 9",
-    "symbol": "https://m.media-amazon.com/images/I/71GNE098B4L.jpg",
-    "participation_amount": 20.5,
-    "total_amount": 61,
-    "game_type_id": {
-        "id": 1,
-        "name": "Xổ số BLOCKCHAIN",
-        "symbol": "symbol"
-    },
-    "owner_id": {
-        "id": 142859,
-        "username": "tranthe"
-    },
-    "current_session": {
-        "id": 341300,
-        "status": "running",
-        "time_start": "2025-10-04T15:36:39.466Z",
-        "session": "1759592019466",
-        "can_join": false
-    },
-    "game_set_prizes": [
-        {
-            "rank": 1,
-            "percent": 60
+    "data": {
+        "id": 92,
+        "name": "890",
+        "symbol": "https://m.media-amazon.com/images/I/71GNE098B4L.jpg",
+        "participation_amount": 5,
+        "numJoinerView": 0,
+        "total_amount": 0,
+        "game_type_id": {
+            "id": 1,
+            "name": "Xổ số BLOCKCHAIN",
+            "symbol": "symbol"
         },
-        {
-            "rank": 2,
-            "percent": 40
-        }
-    ],
-    "timestamp": "2025-10-04T15:37:20.367Z"
+        "owner": {
+            "id": 142862,
+            "username": "Dautay",
+            "fullname": "Dautay",
+            "avatar": "https://api.telegram.org/file/bot8216959304:AAG4GJ6Wu_zwDh_ejYJK6OV_1TGCswTnZyM/photos/file_0.jpg?inline=1"
+        },
+        "current_session": {
+            "id": 588957,
+            "status": "pending",
+            "time_start": "2025-10-27T10:01:15.792Z",
+            "session": "1761559085792",
+            "can_join": true,
+            "is_joiner": false
+        },
+        "game_set_prizes": [
+            {
+                "rank": 1,
+                "percent": 100
+            }
+        ],
+        "timestamp": "2025-10-27T10:01:06.957Z"
+    }
 }
 ```
 
@@ -230,6 +232,7 @@ GET /game-rooms/find-by-id?room_id=123
 | `owner_id` | object | Thông tin chủ phòng |
 | `current_session` | object | Session hiện tại |
 | `game_set_prizes` | array | Danh sách giải thưởng |
+| `is_joiner` | array | Kiem tra xem nguoi dung co dang tham gia vao game room khong· |
 | `timestamp` | string | Thời gian tạo |
 
 ---
