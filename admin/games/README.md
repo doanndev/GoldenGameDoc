@@ -29,36 +29,36 @@ Lấy danh sách phòng game với phân trang và bộ lọc.
 
 ```json
 {
-  "data": [
-    {
-      "id": 292,
-      "name": "nhan ok",
-      "game_type": {
-        "id": 1,
-        "name": "Xổ số BLOCKCHAIN",
-        "symbol": "symbol"
-      },
-      "master": {
-        "id": 142859,
-        "username": "tranthe",
-        "fullname": "Trần Tiến Thế"
-      },
-      "current_session_status": "running",
-      "total_sessions": 15,
-      "total_amount": 50000,
-      "current_players_count": 8
+    "data": [
+        {
+            "id": 92,
+            "name": "890",
+            "game_type": {
+                "id": 1,
+                "name": "Xổ số BLOCKCHAIN",
+                "symbol": "symbol"
+            },
+            "master": {
+                "id": 142862,
+                "username": "Dautay",
+                "fullname": "Dautay"
+            },
+            "current_session_status": "pending",
+            "total_sessions": 34,
+            "total_amount": 425,
+            "total_pnl": 0.3599999999999978,
+            "current_players_count": 0
+        }
+    ],
+    "pagination": {
+        "page": 1,
+        "limit": "1",
+        "total": 92,
+        "total_pages": 92,
+        "has_next": true,
+        "has_prev": false
     }
-  ],
-  "pagination": {
-    "page": 1,
-    "limit": 10,
-    "total": 290,
-    "total_pages": 29,
-    "has_next": true,
-    "has_prev": false
-  }
-}
-```
+}```
 
 #### 📋 Response Fields
 
@@ -101,50 +101,45 @@ Lấy thông tin chi tiết của một phòng game cụ thể.
 
 ```json
 {
-  "data": {
-    "id": 292,
-    "name": "nhan ok",
-    "symbol": "GOLD",
-    "participation_amount": 100.50,
-    "total_amount": 50000,
-    "prizes_num": 3,
-    "status": "running",
-    "game_type": {
-      "id": 1,
-      "name": "Xổ số BLOCKCHAIN",
-      "symbol": "symbol"
-    },
-    "master": {
-      "id": 142859,
-      "username": "tranthe",
-      "fullname": "Trần Tiến Thế",
-      "email": "tranthe@example.com"
-    },
-    "current_session": {
-      "id": 339640,
-      "status": "running",
-      "time_start": "2025-10-04T10:02:49.009Z",
-      "session": "game_room_292_session_001",
-      "players_count": 8
-    },
-    "game_set_prizes": [
-      {
-        "rank": 1,
-        "percent": 60.00
-      },
-      {
-        "rank": 2,
-        "percent": 30.00
-      },
-      {
-        "rank": 3,
-        "percent": 10.00
-      }
-    ],
-    "total_sessions": 15,
-    "created_at": "2025-01-15T10:00:00.000Z",
-    "updated_at": "2025-01-15T10:00:00.000Z"
-  }
+    "data": {
+        "id": 87,
+        "name": "the yeu doi 4",
+        "symbol": "GOLD",
+        "participation_amount": 100,
+        "total_amount": 3100,
+        "total_prizes": 2160,
+        "total_pnl": 456,
+        "prizes_num": 1,
+        "status": "run",
+        "game_type": {
+            "id": 1,
+            "name": "Xổ số BLOCKCHAIN",
+            "symbol": "symbol"
+        },
+        "master": {
+            "id": 142859,
+            "username": "tranthe",
+            "fullname": "HIEUTHUHAI",
+            "email": "tranthe2k2ak@gmail.com"
+        },
+        "current_session": {
+            "id": 587432,
+            "status": "pending",
+            "time_start": "2025-10-27T09:08:52.308Z",
+            "session": "1761555942308",
+            "players_count": 0,
+            "pnl_amount": 0
+        },
+        "game_set_prizes": [
+            {
+                "rank": 1,
+                "percent": 100
+            }
+        ],
+        "total_sessions": 9,
+        "created_at": "2025-10-27T09:08:18.851Z",
+        "updated_at": "2025-10-27T09:08:18.851Z"
+    }
 }
 ```
 
@@ -313,12 +308,14 @@ Không có query parameters.
 
 ```json
 {
-  "data": {
-    "total_rooms": 290,
-    "total_amount": 1500000,
-    "rooms_running": 25,
-    "rooms_pending": 15
-  }
+    "data": {
+        "total_rooms": 92,
+        "total_amount": 69200,
+        "total_prizes": 26286.14,
+        "total_pnl": 7710.21,
+        "rooms_running": 1,
+        "rooms_pending": 91
+    }
 }
 ```
 
