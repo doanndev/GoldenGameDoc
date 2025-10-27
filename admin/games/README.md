@@ -210,34 +210,36 @@ Lấy danh sách phiên game của một phòng cụ thể với phân trang.
 
 ```json
 {
-  "data": [
-    {
-      "id": 339640,
-      "status": "running",
-      "time_start": "2025-10-04T10:02:49.009Z",
-      "session": "game_room_273_session_001",
-      "players_count": 8,
-      "total_amount": 40.0,
-      "created_at": "2025-10-04T10:02:49.009Z"
-    },
-    {
-      "id": 339639,
-      "status": "end",
-      "time_start": "2025-10-04T09:30:15.000Z",
-      "session": "game_room_273_session_000",
-      "players_count": 5,
-      "total_amount": 25.0,
-      "created_at": "2025-10-04T09:30:15.000Z"
+    "data": [
+        {
+            "id": 586286,
+            "status": "end",
+            "time_start": "2025-10-27T08:29:18.288Z",
+            "session": "1761553568288",
+            "pnl_amount": 65,
+            "players_count": 5,
+            "total_amount": 500,
+            "created_at": "2025-10-27T08:26:09.755Z"
+        },
+        {
+            "id": 586150,
+            "status": "end",
+            "time_start": "2025-10-27T08:25:08.508Z",
+            "session": "1761553318508",
+            "pnl_amount": 39,
+            "players_count": 3,
+            "total_amount": 300,
+            "created_at": "2025-10-27T08:21:59.968Z"
+        }
+    ],
+    "pagination": {
+        "page": 1,
+        "limit": "2",
+        "total": 9,
+        "total_pages": 5,
+        "has_next": true,
+        "has_prev": false
     }
-  ],
-  "pagination": {
-    "page": 1,
-    "limit": 10,
-    "total": 15,
-    "total_pages": 2,
-    "has_next": true,
-    "has_prev": false
-  }
 }
 ```
 
