@@ -77,6 +77,7 @@ Lấy danh sách phòng game với phân trang và bộ lọc.
 | `current_session_status` | string\|null | Trạng thái session hiện tại |
 | `total_sessions` | number | Tổng số sessions |
 | `total_amount` | number | Tổng số tiền thu được |
+| `total_pnl` | number | Tổng số lợi nhuận của phòng |
 | `current_players_count` | number | Số người chơi hiện tại |
 
 ---
@@ -156,6 +157,7 @@ Lấy thông tin chi tiết của một phòng game cụ thể.
 | `symbol` | string | Ký hiệu phòng |
 | `participation_amount` | number | Số tiền tham gia |
 | `total_amount` | number | Tổng số tiền thu được |
+| `total_pnl` | number | Tổng số lợi nhuận của phòng |
 | `prizes_num` | number | Số lượng giải thưởng |
 | `status` | string | Trạng thái phòng |
 | `game_type` | object | Thông tin loại game |
@@ -253,6 +255,7 @@ Lấy danh sách phiên game của một phòng cụ thể với phân trang.
 | `session` | string | Tên session |
 | `players_count` | number | Số người chơi trong session |
 | `total_amount` | number | Tổng số tiền trong session |
+| `pnl_amount` | number | Tổng số lợi nhuận mỗi phiên |
 | `created_at` | string | Thời gian tạo session |
 
 #### 🔍 Business Logic
