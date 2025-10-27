@@ -58,7 +58,8 @@ Lấy danh sách phòng game với phân trang và bộ lọc.
         "has_next": true,
         "has_prev": false
     }
-}```
+}
+```
 
 #### 📋 Response Fields
 
