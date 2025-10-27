@@ -474,6 +474,363 @@ async function getUserPnL(userId) {
 - Admin authentication
 - Permission guards
 
+# Update User Master Status API Documentation
+
+## API Endpoint: PATCH /admin/users/:id/is-master
+
+API này cho phép Admin cập nhật trạng thái master của user (thăng chức hoặc hạ chức user).
+
+### Authentication
+- **Required**: Admin JWT Token (Bearer Token)
+- **Guard**: AdminJwtAuthGuard + PermissionGuard
+- **Permission**: Chỉ Super Admin và Admin mới có quyền sử dụng API này
+
+### URL Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | number | Yes | ID của user cần cập nhật |
+
+### Request Body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `is_master` | boolean | Yes | Trạng thái master mới: `true` (promote) hoặc `false` (remove) |
+| `reason` | string | No | Lý do cập nhật (optional) |
+
+### Request Examples
+
+#### Promote User to Master
+
+```bash
+# Sử dụng cURL
+curl -X PATCH "http://localhost:3000/admin/users/123/is-master" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_ADMIN_JWT_TOKEN" \
+  -d '{
+    "is_master": true,
+    "reason": "Promoted for excellent performance in loyalty program"
+  }'
+```
+
+#### Remove Master Status
+
+```bash
+curl -X PATCH "http://localhost:3000/admin/users/123/is-master" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_ADMIN_JWT_TOKEN" \
+  -d '{
+    "is_master": false,
+    "reason": "Removed due to inactivity"
+  }'
+```
+
+#### Without Reason
+
+```bash
+curl -X PATCH "http://localhost:3000/admin/users/123/is-master" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_ADMIN_JWT_TOKEN" \
+  -d '{
+    "is_master": true
+  }'
+```
+
+#### Using Fetch API
+
+```javascript
+// Promote user to master
+fetch('http://localhost:3000/admin/users/123/is-master', {
+  method: 'PATCH',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': 'Bearer YOUR_ADMIN_JWT_TOKEN'
+  },
+  body: JSON.stringify({
+    is_master: true,
+    reason: 'Promoted for loyalty'
+  })
+})
+.then(response => response.json())
+.then(data => console.log(data))
+.catch(error => console.error('Error:', error));
+```
+
+### Response Format
+
+#### Success Response (200 OK)
+
+```json
+{
+  "message": "User promoted to master status successfully",
+  "user_id": 123,
+  "action": "update_is_master_promote",
+  "timestamp": "2025-01-15T10:30:00.000Z"
+}
+```
+
+Hoặc khi remove master status:
+
+```json
+{
+  "message": "User removed from master status successfully",
+  "user_id": 123,
+  "action": "update_is_master_remove",
+  "timestamp": "2025-01-15T10:30:00.000Z"
+}
+```
+
+#### Response Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `message` | string | Thông báo kết quả thực hiện |
+| `user_id` | number | ID của user được cập nhật |
+| `action` | string | Hành động thực hiện: `update_is_master_promote` hoặc `update_is_master_remove` |
+| `timestamp` | string (ISO 8601) | Thời gian thực hiện |
+
+### Error Responses
+
+#### 401 Unauthorized
+
+```json
+{
+  "statusCode": 401,
+  "message": "Unauthorized"
+}
+```
+
+**Causes:**
+- Không có JWT token
+- JWT token không hợp lệ
+- JWT token đã hết hạn
+- User không có quyền admin
+
+#### 403 Forbidden
+
+```json
+{
+  "statusCode": 403,
+  "message": "Insufficient permissions. Only Super Admin and Admin can update is_master"
+}
+```
+
+**Causes:**
+- Admin không đủ quyền (chỉ Super Admin và Admin mới có quyền)
+
+#### 404 Not Found
+
+```json
+{
+  "statusCode": 404,
+  "message": "User not found"
+}
+```
+
+**Causes:**
+- User ID không tồn tại trong hệ thống
+
+#### 400 Bad Request
+
+```json
+{
+  "statusCode": 400,
+  "message": "User's master status is already true"
+}
+```
+
+Hoặc:
+
+```json
+{
+  "statusCode": 400,
+  "message": [
+    "is_master must be a boolean value",
+    "reason must be a string"
+  ]
+}
+```
+
+**Causes:**
+- Trạng thái is_master hiện tại giống với giá trị muốn cập nhật
+- Request body không hợp lệ
+- Validation errors
+
+### Business Logic
+
+1. **Permission Check**: 
+   - Chỉ Super Admin và Admin mới có quyền cập nhật `is_master`
+   - Các role khác sẽ nhận lỗi 403 Forbidden
+
+2. **User Validation**: 
+   - Kiểm tra user có tồn tại trong hệ thống
+   - Nếu không tồn tại, trả về 404
+
+3. **Status Validation**: 
+   - Kiểm tra `is_master` hiện tại của user
+   - Nếu giá trị mới giống giá trị cũ, trả về 400 Bad Request
+
+4. **Database Update**: 
+   - Cập nhật field `is_master` trong bảng `users`
+   - Cập nhật giá trị: `true` (promote) hoặc `false` (remove)
+
+5. **Admin Logging**: 
+   - Ghi log toàn bộ hoạt động vào bảng `admin_logs`
+   - Lưu thông tin: admin_id, action, module, description, ip_address, user_agent
+   - Lưu old_data và new_data để audit trail
+   - Target được set là user và user_id
+
+6. **Audit Trail**: 
+   - Log chứa thông tin chi tiết về thay đổi
+   - Bao gồm IP address của admin
+   - Bao gồm user agent
+   - Bao gồm lý do (nếu có)
+
+### Usage Scenarios
+
+#### Scenario 1: Promote Regular User to Master
+
+```bash
+# Request
+PATCH /admin/users/456/is-master
+{
+  "is_master": true,
+  "reason": "User has referred 100+ active users"
+}
+
+# Response
+{
+  "message": "User promoted to master status successfully",
+  "user_id": 456,
+  "action": "update_is_master_promote",
+  "timestamp": "2025-01-15T10:30:00.000Z"
+}
+```
+
+#### Scenario 2: Remove Master Status
+
+```bash
+# Request
+PATCH /admin/users/789/is-master
+{
+  "is_master": false,
+  "reason": "Violation of terms of service"
+}
+
+# Response
+{
+  "message": "User removed from master status successfully",
+  "user_id": 789,
+  "action": "update_is_master_remove",
+  "timestamp": "2025-01-15T10:30:00.000Z"
+}
+```
+
+#### Scenario 3: Attempting to Update Already True Status
+
+```bash
+# Request (user is already master)
+PATCH /admin/users/123/is-master
+{
+  "is_master": true
+}
+
+# Response (400 Bad Request)
+{
+  "statusCode": 400,
+  "message": "User's master status is already true"
+}
+```
+
+#### Scenario 4: Insufficient Permissions
+
+```bash
+# Request from Moderator account
+PATCH /admin/users/123/is-master
+{
+  "is_master": true
+}
+
+# Response (403 Forbidden)
+{
+  "statusCode": 403,
+  "message": "Insufficient permissions. Only Super Admin and Admin can update is_master"
+}
+```
+
+### Admin Log Example
+
+Sau khi API được gọi thành công, một record sẽ được tạo trong `admin_logs`:
+
+```json
+{
+  "id": 12345,
+  "admin_id": 1,
+  "action": "UPDATE",
+  "module": "USERS",
+  "description": "User promoted to master status - Reason: Promoted for excellence",
+  "ip_address": "192.168.1.100",
+  "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)...",
+  "target_id": 123,
+  "target_type": "user",
+  "old_data": {
+    "is_master": false
+  },
+  "new_data": {
+    "is_master": true,
+    "reason": "Promoted for excellence"
+  },
+  "created_at": "2025-01-15T10:30:00.000Z"
+}
+```
+
+### Notes
+
+1. **Security**: 
+   - Chỉ Super Admin và Admin mới có quyền sử dụng API này
+   - Tất cả actions đều được log để audit
+
+2. **Validation**: 
+   - Field `is_master` là bắt buộc và phải là boolean
+   - Field `reason` là optional nhưng khuyến khích điền vào để tracking
+
+3. **Idempotency**: 
+   - API sẽ trả về lỗi nếu cố gắng cập nhật cùng một giá trị
+
+4. **Logging**: 
+   - Tất cả actions đều được log đầy đủ
+   - Bao gồm IP address và user agent của admin
+   - Bao gồm old_data và new_data
+
+5. **Performance**: 
+   - API sử dụng transaction để đảm bảo data consistency
+   - Logging được thực hiện bất đồng bộ để không ảnh hưởng performance
+
+6. **Database Schema**: 
+   - Field `is_master` là boolean trong bảng `users`
+   - Mặc định là `false`
+
+### Related Endpoints
+
+- `GET /admin/users` - Lấy danh sách users (có thể filter theo `is_master`)
+- `GET /admin/users/:id` - Lấy chi tiết user (bao gồm `is_master`)
+- `PATCH /admin/users/:id/block` - Block user
+- `PATCH /admin/users/:id/unblock` - Unblock user
+- `GET /admin/users/:id/pnl` - Lấy thống kê PnL của user
+
+### Testing
+
+#### Unit Tests
+- Test với admin có quyền hợp lệ
+- Test với admin không có quyền
+- Test với user không tồn tại
+- Test với trạng thái đã giống nhau
+- Test với request body không hợp lệ
+
+#### Integration Tests
+- Test complete flow: update -> verify database -> verify logs
+- Test multiple consecutive updates
+- Test concurrent updates (nếu cần)
 
 
 
