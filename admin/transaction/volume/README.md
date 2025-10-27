@@ -247,3 +247,189 @@ ORDER BY date
 - **Error Logs**: Ghi log chi tiết khi có lỗi
 - **Performance**: Monitor query execution time
 - **Usage**: Track API call frequency và patterns
+
+
+---
+
+## 🎮 Game Revenue and Rewards API
+
+### GET `/api/v1/admin/transaction/revenue-rewards`
+
+Lấy dữ liệu thống kê doanh thu (revenue) và phần thưởng phát hành (rewards) từ các trò chơi với khả năng lọc theo khoảng thời gian.
+
+#### 🔐 Authentication
+- **Required**: Admin JWT Token
+- **Guard**: `AdminJwtAuthGuard` + `PermissionGuard`
+- **Permission**: Cần quyền truy cập module TRANSACTION
+
+#### 📝 Query Parameters
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `time_filter` | string | No | - | Bộ lọc thời gian: `today`, `week`, `month`, `custom` |
+| `start_date` | string | No | - | Ngày bắt đầu (chỉ dùng với `time_filter=custom`, format: YYYY-MM-DD) |
+| `end_date` | string | No | - | Ngày kết thúc (chỉ dùng với `time_filter=custom`, format: YYYY-MM-DD) |
+
+#### 📊 Response Format
+
+```json
+{
+  "status": "success",
+  "message": "Volume data fetched successfully",
+  "data": [
+    { "date": "2025-01-01", "revenue": 12000000, "rewards": 1000 },
+    { "date": "2025-01-02", "revenue": 15000000, "rewards": 1000 },
+    { "date": "2025-01-03", "revenue": 10000000, "rewards": 1000 }
+  ]
+}
+```
+
+#### 📋 Response Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `status` | string | Trạng thái response: "success" |
+| `message` | string | Thông báo từ server |
+| `data` | array | Danh sách dữ liệu revenue và rewards theo ngày/tháng |
+| `data[].date` | string | Ngày/tháng (format: YYYY-MM-DD hoặc YYYY-MM) |
+| `data[].revenue` | number | Tổng doanh thu trong ngày/tháng |
+| `data[].rewards` | number | Tổng phần thưởng phát hành trong ngày/tháng |
+
+#### 🔍 Business Logic
+
+##### Time Filter Options
+- **today**: Lấy dữ liệu revenue và rewards trong ngày hiện tại (00:00:00 - 23:59:59)
+- **week**: Lấy dữ liệu revenue và rewards trong 7 ngày gần nhất
+- **month**: Lấy dữ liệu revenue và rewards trong 1 tháng gần nhất
+- **custom**: Lấy dữ liệu revenue và rewards trong khoảng thời gian tùy chỉnh
+- **default**: Nếu không có time_filter, mặc định lấy 30 ngày gần nhất
+
+##### Revenue Calculation Logic
+- Chỉ tính các giao dịch `game_join_rooms` có `status = 'executed'`
+- Sử dụng `amount` làm doanh thu
+- Dựa trên `time_join` để group theo thời gian
+
+##### Rewards Calculation Logic
+- Chỉ tính các kết quả `game_session_results` có `status = 'executed'`
+- Sử dụng `prize_amount` làm tổng phần thưởng
+- Dựa trên `created_at` để group theo thời gian
+
+##### Date Grouping Logic
+- **Today/Week**: Group theo ngày (YYYY-MM-DD)
+- **Month**: Group theo tháng (YYYY-MM)
+- **Custom**: 
+  - Nếu khoảng thời gian ≤ 30 ngày: Group theo ngày (YYYY-MM-DD)
+  - Nếu khoảng thời gian > 30 ngày: Group theo tháng (YYYY-MM)
+
+##### Custom Date Range Validation
+- Khi sử dụng `time_filter=custom`, bắt buộc phải có `start_date` và `end_date`
+- Format ngày: `YYYY-MM-DD`
+- Tự động set giờ: `start_date` = 00:00:00, `end_date` = 23:59:59
+
+#### ⚡ Performance Optimization
+- **Parallel Queries**: Thực hiện 2 queries song song cho revenue và rewards
+- **Raw SQL**: Sử dụng raw SQL với GROUP BY để tối ưu performance
+- **Index Optimization**: Tận dụng index trên `time_join`, `created_at`, `status`
+- **Date Range Filtering**: Filter ở database level để giảm data transfer
+
+#### 📝 Example Usage
+
+```bash
+# Lấy revenue và rewards hôm nay
+GET /api/v1/admin/transaction/revenue-rewards?time_filter=today
+
+# Lấy revenue và rewards tuần qua
+GET /api/v1/admin/transaction/revenue-rewards?time_filter=week
+
+# Lấy revenue và rewards tháng qua
+GET /api/v1/admin/transaction/revenue-rewards?time_filter=month
+
+# Lấy revenue và rewards trong khoảng thời gian tùy chỉnh
+GET /api/v1/admin/transaction/revenue-rewards?time_filter=custom&start_date=2025-01-01&end_date=2025-01-31
+
+# Mặc định (30 ngày qua)
+GET /api/v1/admin/transaction/revenue-rewards
+```
+
+#### ❌ Error Responses
+
+| Status Code | Description |
+|-------------|-------------|
+| 400 | Invalid date format hoặc thiếu start_date/end_date cho custom filter |
+| 401 | Unauthorized |
+| 403 | Forbidden |
+| 500 | Internal Server Error |
+
+#### 🔧 Database Schema
+
+##### Tables Used
+- `game_join_rooms` - Thông tin người chơi join game (revenue)
+- `game_session_results` - Thông tin kết quả và phần thưởng (rewards)
+
+##### Key Fields
+- `time_join` - Thời gian join game (dùng để group theo thời gian cho revenue)
+- `created_at` - Thời gian tạo kết quả (dùng để group theo thời gian cho rewards)
+- `status` - Trạng thái giao dịch (filter: 'executed')
+- `amount` - Số tiền đặt cược (revenue calculation)
+- `prize_amount` - Số tiền phần thưởng (rewards calculation)
+
+#### 📈 Use Cases
+
+##### Frontend Dashboard
+- **Revenue vs Rewards Chart**: Hiển thị so sánh doanh thu và phần thưởng
+- **Profit Analysis**: Tính toán lợi nhuận ròng (revenue - rewards)
+- **Trend Analysis**: Phân tích xu hướng doanh thu và phần thưởng theo thời gian
+- **Performance Metrics**: Đo lường hiệu suất kinh doanh
+
+##### Analytics & Reporting
+- **Revenue Trends**: Phân tích xu hướng doanh thu theo thời gian
+- **Reward Distribution**: Theo dõi việc phát hành phần thưởng
+- **Game Performance**: Đánh giá hiệu suất của các trò chơi
+- **Business Intelligence**: Cung cấp dữ liệu cho các báo cáo kinh doanh
+
+### Technical Implementation Details
+
+#### Query Optimization
+```sql
+-- Example query for revenue data
+SELECT 
+  CASE 
+    WHEN $3 = 'month' OR $3 = 'custom' THEN TO_CHAR(time_join, 'YYYY-MM')
+    ELSE TO_CHAR(time_join, 'YYYY-MM-DD')
+  END as date,
+  SUM(CAST(amount AS DECIMAL)) as revenue
+FROM game_join_rooms 
+WHERE time_join >= $1 
+  AND time_join <= $2 
+  AND status = 'executed'
+GROUP BY 
+  CASE 
+    WHEN $3 = 'month' OR $3 = 'custom' THEN TO_CHAR(time_join, 'YYYY-MM')
+    ELSE TO_CHAR(time_join, 'YYYY-MM-DD')
+  END
+ORDER BY date
+```
+
+```sql
+-- Example query for rewards data
+SELECT 
+  CASE 
+    WHEN $3 = 'month' OR $3 = 'custom' THEN TO_CHAR(created_at, 'YYYY-MM')
+    ELSE TO_CHAR(created_at, 'YYYY-MM-DD')
+  END as date,
+  SUM(CAST(prize_amount AS DECIMAL)) as rewards
+FROM game_session_results 
+WHERE created_at >= $1 
+  AND created_at <= $2 
+  AND status = 'executed'
+GROUP BY 
+  CASE 
+    WHEN $3 = 'month' OR $3 = 'custom' THEN TO_CHAR(created_at, 'YYYY-MM')
+    ELSE TO_CHAR(created_at, 'YYYY-MM-DD')
+  END
+ORDER BY date
+```
+
+### Updated Database Entities
+- `GameJoinRoom` - Game join transactions (for revenue)
+- `GameSessionResults` - Game session results (for rewards)
