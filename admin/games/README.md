@@ -328,6 +328,7 @@ Không có query parameters.
 |-------|------|-------------|
 | `total_rooms` | number | Tổng số phòng game |
 | `total_amount` | number | Tổng số tiền thu được từ tất cả phòng |
+| `total_pnl` | number | Tổng số loi nhuan cua tat ca cac phong |
 | `rooms_running` | number | Số phòng đang chạy (session mới nhất có status = 'running') |
 | `rooms_pending` | number | Số phòng đang chờ (session mới nhất có status = 'pending') |
 
