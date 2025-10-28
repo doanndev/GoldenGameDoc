@@ -9,6 +9,9 @@ Module BG Ref cung cấp hệ thống affiliate ưu tiên với khả năng cấ
 - **Password Authentication**: Xác thực username/email và password với bcrypt
 - **Quản lý Commission**: Cập nhật commission percent cho direct downline
 - **Thông tin BG**: Lấy thông tin chi tiết về ví và affiliate status
+- **Rút hoa hồng**: Tự động rút và gửi MMP tokens qua blockchain
+- **Xem tiền có thể rút**: Kiểm tra số tiền có thể rút trước khi withdraw
+- **Lịch sử rút tiền**: Xem lịch sử các lần rút tiền với pagination
 - **JWT Authentication**: Sử dụng JWT với secret riêng cho BG Ref
 - **Wallet Integration**: Tích hợp với hệ thống ví main và import
 - **User Status Management**: Tự động update user status từ 'block' thành 'active'
@@ -438,6 +441,126 @@ Lấy thống kê chi tiết về downline của user đang đăng nhập.
 - `sort_by` (optional): Sắp xếp theo `commission`, `transactions`, `level`, `created_at` (mặc định: `commission`)
 - `sort_order` (optional): Thứ tự sắp xếp `asc` hoặc `desc` (mặc định: `desc`)
 
+### 12. Số tiền có thể rút
+**GET** `/bg-ref/available-withdrawal`
+
+Lấy thông tin số tiền có thể rút của user đang đăng nhập.
+
+**Headers:**
+- `Authorization: Bearer <access_token>` hoặc `bg_access_token` cookie
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Successfully retrieved available withdrawal amount",
+  "data": {
+    "user_id": 142881,
+    "username": "User_123456789",
+    "referral_code": "ABC12345",
+    "available_amount_mmp": 12.88,
+    "rewards_count": 10,
+    "has_wallet": true,
+    "wallet_address": "B3p3RCV2XCrpNf6Hucxg6JvCWScAe6i96uYbAZhXYhSh"
+  }
+}
+```
+
+**Case: Không có tiền để rút**
+```json
+{
+  "success": true,
+  "message": "Successfully retrieved available withdrawal amount",
+  "data": {
+    "user_id": 142881,
+    "username": "User_123456789",
+    "referral_code": "ABC12345",
+    "available_amount_mmp": 0,
+    "rewards_count": 0,
+    "has_wallet": true,
+    "wallet_address": "B3p3RCV2XCrpNf6Hucxg6JvCWScAe6i96uYbAZhXYhSh"
+  }
+}
+```
+
+### 13. Rút hoa hồng BG
+**POST** `/bg-ref/withdraw`
+
+Rút tất cả hoa hồng BG khả dụng của user đang đăng nhập. Tự động gửi MMP tokens qua blockchain.
+
+**Headers:**
+- `Authorization: Bearer <access_token>` hoặc `bg_access_token` cookie
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "BG commission withdrawal request completed",
+  "data": {
+    "user_id": 142881,
+    "username": "User_123456789",
+    "referral_code": "ABC12345",
+    "total_withdrawn_mmp": 12.88,
+    "rewards_count": 10,
+    "withdraw_id": "123",
+    "status": "success",
+    "hash": "PUetoscZVjukCAZVWsoykeM34mV8i7ALFFSDW271rinG2hrEZAAfbXjRxGFvH5EY866FEvEf9moh3bUKS99SVBd",
+    "address": "B3p3RCV2XCrpNf6Hucxg6JvCWScAe6i96uYbAZhXYhSh",
+    "created_at": "2025-01-28T11:11:37.000Z"
+  }
+}
+```
+
+**Validation Rules:**
+- User phải có hoa hồng chưa rút (`withdraw_status = false`)
+- User phải có main wallet address
+- Tự động gửi MMP tokens qua blockchain (Solana)
+- Tự động cập nhật withdraw status (success/failed)
+
+### 14. Lịch sử rút tiền
+**GET** `/bg-ref/withdraw-history`
+
+Lấy lịch sử rút tiền của user đang đăng nhập.
+
+**Headers:**
+- `Authorization: Bearer <access_token>` hoặc `bg_access_token` cookie
+
+**Query Parameters:**
+- `page` (optional): Số trang (mặc định: 1)
+- `limit` (optional): Số item mỗi trang (mặc định: 10, tối đa: 100)
+- `search` (optional): Tìm kiếm theo username, hash, amount
+- `status` (optional): Lọc theo status: `pending`, `success`, `failed`
+- `dateFrom` (optional): Lọc từ ngày (format: YYYY-MM-DD)
+- `dateTo` (optional): Lọc đến ngày (format: YYYY-MM-DD)
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Successfully retrieved withdrawal history",
+  "data": [
+    {
+      "id": 123,
+      "username": "User_123456789",
+      "amount": 12.88,
+      "amount_usd": 12.88,
+      "address": "B3p3RCV2XCrpNf6Hucxg6JvCWScAe6i96uYbAZhXYhSh",
+      "hash": "PUetoscZVjukCAZVWsoykeM34mV8i7ALFFSDW271rinG2hrEZAAfbXjRxGFvH5EY866FEvEf9moh3bUKS99SVBd",
+      "status": "success",
+      "created_at": "2025-01-28T11:11:37.000Z"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 10,
+    "total": 1,
+    "total_pages": 1,
+    "has_next": false,
+    "has_prev": false
+  }
+}
+```
+
 **Response:**
 ```json
 {
@@ -719,6 +842,22 @@ curl -X GET /bg-ref/downline-stats \
 
 # Với filters
 curl -X GET "/bg-ref/downline-stats?level=1&min_commission=100&sort_by=commission&sort_order=desc" \
+  -H "Authorization: Bearer <access_token>"
+
+# 10. Lấy số tiền có thể rút
+curl -X GET /bg-ref/available-withdrawal \
+  -H "Authorization: Bearer <access_token>"
+
+# 11. Rút hoa hồng BG
+curl -X POST /bg-ref/withdraw \
+  -H "Authorization: Bearer <access_token>"
+
+# 12. Lấy lịch sử rút tiền
+curl -X GET /bg-ref/withdraw-history \
+  -H "Authorization: Bearer <access_token>"
+
+# Với pagination và filters
+curl -X GET "/bg-ref/withdraw-history?page=1&limit=10&status=success" \
   -H "Authorization: Bearer <access_token>"
 ```
 
