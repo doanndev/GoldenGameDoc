@@ -6,7 +6,7 @@ API quản lý dữ liệu volume giao dịch dành cho admin, cung cấp thông
 
 ## 🚀 Endpoints
 
-### GET `/api/v1/admin/transaction/volume`
+### GET `/api/v1/admin/stats/volume`
 
 Lấy dữ liệu volume giao dịch của 4 loại: swap, p2p, deposit, withdraw với khả năng lọc theo khoảng thời gian.
 
@@ -252,7 +252,7 @@ ORDER BY date
 
 ## 🎮 Game Revenue and Rewards API
 
-### GET `/api/v1/admin/transaction/revenue-rewards`
+### GET `/api/v1/admin/stats/revenue-rewards`
 
 Lấy dữ liệu thống kê doanh thu (revenue) và phần thưởng phát hành (rewards) từ các trò chơi với khả năng lọc theo khoảng thời gian.
 
