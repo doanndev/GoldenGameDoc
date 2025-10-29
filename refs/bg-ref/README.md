@@ -213,7 +213,7 @@ Cập nhật commission percent của direct downline (chỉ người giới thi
 **Request Body:**
 ```json
 {
-  "to_wallet_address": "ABC123...",
+  "to_user_id": 2,
   "new_percent": 15.5
 }
 ```
@@ -235,8 +235,7 @@ Cập nhật commission percent của direct downline (chỉ người giới thi
     "username": "user2",
     "email": "user2@example.com",
     "fullname": "User Two",
-    "referral_code": "REF002",
-    "wallet_address": "ABC123..."
+    "referral_code": "REF002"
   },
   "old_percent": 10.0,
   "new_percent": 15.5
