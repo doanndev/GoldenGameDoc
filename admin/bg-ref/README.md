@@ -85,37 +85,50 @@ Lưu ý: Không bao gồm route thử nghiệm `POST /admin/bg-ref/test-create-n
 
 ---
 
-### 3) Lấy danh sách tất cả BG Affiliate Trees (tối ưu, kèm thống kê cơ bản)
+### 3) Lấy danh sách tất cả BG Affiliate Trees (phân trang + tìm kiếm theo p2p style)
 
 - Method: `GET`
 - Path: `/admin/bg-ref/bg-affiliate/trees`
 - Auth: Yêu cầu
 - Query params (tuỳ chọn)
   - `alias`: Lọc theo alias chính xác.
+  - `search`: Tìm theo `root_user.username`, `root_user.fullname` hoặc `main_wallet_address`.
+  - `page`: Trang hiện tại (mặc định 1).
+  - `limit`: Số item/trang (mặc định 10, tối đa 100).
 
-- Response 200 (mảng)
+- Response 200 (p2p-like shape)
 
 ```json
-[
-  {
-    "tree_id": 1,
-    "root_user": {
-      "id": 123,
-      "username": "root123",
-      "email": "root@example.com",
-      "fullname": "Root Admin",
-      "main_wallet_address": "0xabc..."
-    },
-    "total_commission_percent": 45,
-    "alias": "team-alpha-v2",
-    "created_at": "2025-10-30T00:00:00.000Z",
-    "node_count": 10,
-    "total_members": 9
+{
+  "data": [
+    {
+      "tree_id": 1,
+      "root_user": {
+        "id": 123,
+        "username": "root123",
+        "email": "root@example.com",
+        "fullname": "Root Admin",
+        "main_wallet_address": "0xabc..."
+      },
+      "total_commission_percent": 45,
+      "alias": "team-alpha-v2",
+      "created_at": "2025-10-30T00:00:00.000Z",
+      "node_count": 10,
+      "total_members": 9
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 10,
+    "total": 35,
+    "totalPages": 4,
+    "hasNext": true,
+    "hasPrev": false
   }
-]
+}
 ```
 
-Ghi chú: `node_count` bao gồm root; `total_members` không tính root (chỉ các node có `parent_user_id != null`).
+Ghi chú: `node_count` bao gồm root; `total_members` không tính root (node có `parent_user_id != null`). Search sử dụng ILIKE (Postgres) và escape `%`.
 
 ---
 
