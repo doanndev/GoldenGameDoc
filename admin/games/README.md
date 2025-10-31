@@ -24,7 +24,7 @@ Lấy danh sách phòng game với phân trang và bộ lọc.
 | `search` | string | No | - | Tìm kiếm theo tên phòng, username master, hoặc ID phòng |
 | `game_type_id` | number | No | - | Lọc theo loại game |
 | `status` | string | No | - | Lọc theo trạng thái session hiện tại |
-| `sort_by_total_amount` | string | No | - | Lọc theo tổng doanh thu |
+| `sort_by_total_amount` | string | No | - | Lọc theo tổng doanh thu - 'ASC' | 'DESC' |
 
 #### 📊 Response Format
 
