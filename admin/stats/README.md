@@ -865,3 +865,154 @@ GET /admin/stats/smart-ref-stats?username=dang&stats_type=referral_count&sort_or
   "error": "Detailed error information"
 }
 ```
+
+
+## 🎮 Game Room Revenue Statistics API
+
+### GET `/api/v1/admin/stats/game-room-revenue`
+
+Lấy thống kê doanh thu của phòng game bao gồm: doanh thu, tổng trả thưởng, lợi nhuận sàn, tổng trả cho master và tổng trả cho ref.
+
+#### 🔐 Authentication
+- **Required**: Admin JWT Token
+- **Guard**: `AdminJwtAuthGuard` + `PermissionGuard`
+- **Permission**: Cần quyền truy cập module TRANSACTION
+
+#### 📝 Query Parameters
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `time_filter` | string | No | - | Bộ lọc thời gian: `today`, `week`, `month`, `custom` |
+| `start_date` | string | No | - | Ngày bắt đầu (chỉ dùng với `time_filter=custom`, format: YYYY-MM-DD) |
+| `end_date` | string | No | - | Ngày kết thúc (chỉ dùng với `time_filter=custom`, format: YYYY-MM-DD) |
+
+#### 📊 Response Format
+
+```json
+{
+  "status": "success",
+  "message": "Game room revenue statistics fetched successfully",
+  "data": {
+    "total_revenue": 1500000.50,
+    "total_rewards_paid": 1200000.25,
+    "platform_profit": 250000.75,
+    "total_master_payment": 45000.00,
+    "total_ref_payment": 30000.50
+  }
+}
+```
+
+#### 📋 Response Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `status` | string | Trạng thái response: "success" |
+| `message` | string | Thông báo từ server |
+| `data` | object | Dữ liệu thống kê doanh thu phòng game |
+| `data.total_revenue` | number | Tổng doanh thu - tổng số tiền đặt cược trong khoảng thời gian |
+| `data.total_rewards_paid` | number | Tổng trả thưởng - tổng giải thưởng đã chi trả thành công |
+| `data.platform_profit` | number | Lợi nhuận sàn - tổng PnL của sàn |
+| `data.total_master_payment` | number | Tổng trả cho master - 3% tổng cược cho các session đã kết thúc |
+| `data.total_ref_payment` | number | Tổng trả cho ref - tổng hoa hồng referral đã trả |
+
+#### 🔍 Business Logic
+
+##### Time Filter Options
+- **today**: Lấy dữ liệu trong ngày hiện tại (00:00:00 - 23:59:59)
+- **week**: Lấy dữ liệu trong 7 ngày gần nhất
+- **month**: Lấy dữ liệu trong 1 tháng gần nhất
+- **custom**: Lấy dữ liệu trong khoảng thời gian tùy chỉnh
+- **default** (không truyền): Lấy dữ liệu trong 30 ngày gần nhất
+
+##### Revenue Calculation Details
+
+###### 1. Total Revenue (Tổng Doanh Thu)
+- **Source**: `game_join_rooms` table
+- **Logic**: Tổng số tiền người chơi đặt cược (bet) trong khoảng thời gian
+- **Conditions**:
+  - `status = 'executed'` (chỉ tính cược đã xác nhận)
+  - `time_join` trong khoảng thời gian lọc
+- **Formula**: `SUM(game_join_rooms.amount)`
+
+###### 2. Total Rewards Paid (Tổng Trả Thưởng)
+- **Source**: `game_session_results` table
+- **Logic**: Tổng số tiền đã trả cho người thắng
+- **Conditions**:
+  - `status = 'executed'` (chỉ tính giải thưởng đã trả thành công)
+  - `created_at` trong khoảng thời gian lọc
+- **Formula**: `SUM(game_session_results.prize_amount)`
+
+###### 3. Platform Profit (Lợi Nhuận Sàn)
+- **Source**: `game_sessions` table
+- **Logic**: Tổng lợi nhuận của sàn từ các session
+- **Conditions**:
+  - `created_at` trong khoảng thời gian lọc
+- **Formula**: `SUM(game_sessions.pnl_amount)`
+
+###### 4. Total Master Payment (Tổng Trả Cho Master)
+- **Source**: `game_sessions` và `game_join_rooms` tables
+- **Logic**: 3% tổng tiền cược cho các session đã kết thúc
+- **Conditions**:
+  - `game_sessions.status = 'end'` (chỉ tính session đã kết thúc)
+  - `game_sessions.updated_at` trong khoảng thời gian lọc
+  - `game_join_rooms.status = 'executed'` (chỉ tính cược hợp lệ)
+- **Formula**: `SUM(game_join_rooms.amount) * 0.03`
+
+###### 5. Total Referral Payment (Tổng Trả Cho Ref)
+- **Sources**: 
+  - `smart_ref_rewards` table (Smart Referral)
+  - `bg_affiliate_commission_rewards` table (BG Affiliate)
+- **Logic**: Tổng hoa hồng referral đã trả trong 2 chương trình
+- **Conditions**:
+  - `created_at` trong khoảng thời gian lọc
+- **Formula**: `SUM(smart_ref_rewards.c) + SUM(bg_affiliate_commission_rewards.commission_amount)`
+
+##### Caching Strategy
+- **Cache Key**: `stats:game_room_revenue:{time_filter}:{start_date}_{end_date}`
+- **Cache TTL**:
+  - `today`: 300 seconds (5 minutes)
+  - `week`: 900 seconds (15 minutes)
+  - `month`: 1800 seconds (30 minutes)
+  - `custom`: 600 seconds (10 minutes)
+
+#### 🎯 Use Cases
+
+##### Case 1: Thống kê doanh thu hôm nay
+```bash
+GET /api/v1/admin/stats/game-room-revenue?time_filter=today
+```
+
+##### Case 2: Thống kê doanh thu tuần này
+```bash
+GET /api/v1/admin/stats/game-room-revenue?time_filter=week
+```
+
+##### Case 3: Thống kê doanh thu tháng này
+```bash
+GET /api/v1/admin/stats/game-room-revenue?time_filter=month
+```
+
+##### Case 4: Thống kê doanh thu theo khoảng thời gian tùy chỉnh
+```bash
+GET /api/v1/admin/stats/game-room-revenue?time_filter=custom&start_date=2025-01-01&end_date=2025-01-31
+```
+
+#### 🐛 Error Handling
+
+##### Bad Request (400)
+```json
+{
+  "statusCode": 400,
+  "message": "Start date and end date are required for custom time filter",
+  "error": "Bad Request"
+}
+```
+
+##### Internal Server Error (500)
+```json
+{
+  "statusCode": 500,
+  "message": "Internal server error",
+  "error": "Internal Server Error"
+}
+```
